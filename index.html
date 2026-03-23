@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>משפחה במשימה</title>
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌟</text></svg>">
+  
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%236C63FF%22 rx=%2220%22/><text x=%2250%%22 y=%2250%%22 dominant-baseline=%22central%22 text-anchor=%22middle%22 font-size=%2265%22>🌟</text></svg>">
+  
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,6 +19,7 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
   <style>
     * { box-sizing: border-box; font-family: 'Rubik', sans-serif; }
@@ -31,6 +39,15 @@
 
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
+
+    const fireConfetti = () => {
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        zIndex: 9999
+      });
+    };
 
     /* ─── theme constants ─── */
     const C = {
@@ -94,8 +111,8 @@
     /* ─── seed data ─── */
     const INIT_DATA = {
       children: [
-        { id: "c1", name: "אליה", username: "elia", birthYear: 2017, birthDate: "15/03/2017", pin: "2017", gender: "boy", avatar: "🧒", photo: "", color: "#6366F1", colorLight: "#EEF2FF", colorGrad: "linear-gradient(135deg,#6366F1,#8B5CF6)", balance: 0, totalEarned: 0, totalSpent: 0, points: 0, savingGoal: { name: "קורקינט חדש", targetAmount: 299 } },
-        { id: "c2", name: "ליאן", username: "lian", birthYear: 2016, birthDate: "22/07/2016", pin: "2016", gender: "girl", avatar: "👧", photo: "", color: "#EC4899", colorLight: "#FDF2F8", colorGrad: "linear-gradient(135deg,#EC4899,#F472B6)", balance: 0, totalEarned: 0, totalSpent: 0, points: 0, savingGoal: { name: "אוזניות אלחוטיות", targetAmount: 200 } },
+        { id: "c1", name: "אליה", username: "elia", birthYear: 2017, birthDate: "15/03/2017", pin: "2017", gender: "boy", avatar: "🧒", photo: "", color: "#6366F1", colorLight: "#EEF2FF", colorGrad: "linear-gradient(135deg,#6366F1,#8B5CF6)", balance: 0, totalEarned: 0, totalSpent: 0, points: 0, savingGoal: { name: "קורקינט חדש", targetAmount: 299 }, academyDifficulty: 2 },
+        { id: "c2", name: "ליאן", username: "lian", birthYear: 2016, birthDate: "22/07/2016", pin: "2016", gender: "girl", avatar: "👧", photo: "", color: "#EC4899", colorLight: "#FDF2F8", colorGrad: "linear-gradient(135deg,#EC4899,#F472B6)", balance: 0, totalEarned: 0, totalSpent: 0, points: 0, savingGoal: { name: "אוזניות אלחוטיות", targetAmount: 200 }, academyDifficulty: 2 },
       ],
       sharedMission: "לסדר את הבית ביחד",
       tasks: [], completions: [], transactions: [],
@@ -1112,7 +1129,8 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
         colorGrad: "linear-gradient(135deg,#6366F1,#8B5CF6)",
         balance: 0, totalEarned: 0, totalSpent: 0, points: 0,
         savingGoal: { name: "מטרה חדשה", targetAmount: 100 },
-        photoX: 50, photoY: 50, photoScale: 1 // נתוני ברירת מחדל לחיתוך
+        photoX: 50, photoY: 50, photoScale: 1,
+        academyDifficulty: 2 // ברירת מחדל: בינוני
       };
       
       const [form, setForm] = useState(init ? { ...init } : blank);
@@ -1169,7 +1187,6 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
             <p style={{fontSize: 11, color: C.soft, marginTop: 0, marginBottom: 10}}>העלה תמונה (כמו elia.jpg) לתיקייה בגיטהאב.</p>
             
             <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 16 }}>
-              {/* כאן אתה רואה את התצוגה המקדימה מגיבה לסליידרים בזמן אמת! */}
               <ChildAvatar child={{...form}} size={64} radius={18} />
               <input 
                 type="text" 
@@ -1180,21 +1197,17 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
               />
             </div>
 
-            {/* כלי החיתוך - מופיעים רק אם הוקלד שם של תמונה */}
             {form.photo && form.photo.trim() !== "" && (
               <div style={{ background: "#F3F4F6", padding: 15, borderRadius: 14, marginBottom: 16 }}>
                 <p style={{ fontSize: 13, fontWeight: "bold", color: C.mid, marginTop: 0, marginBottom: 12 }}>✂️ כיוון וזום לתמונה</p>
-                
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                   <span style={{ fontSize: 12, width: 60, fontWeight: 600 }}>🔍 זום:</span>
                   <input type="range" min="1" max="3" step="0.1" value={form.photoScale || 1} onChange={(e) => set("photoScale", parseFloat(e.target.value))} style={{ flex: 1, direction: "ltr" }} />
                 </div>
-                
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                   <span style={{ fontSize: 12, width: 60, fontWeight: 600 }}>↕️ גובה:</span>
                   <input type="range" min="0" max="100" value={form.photoY !== undefined ? form.photoY : 50} onChange={(e) => set("photoY", parseInt(e.target.value))} style={{ flex: 1, direction: "ltr" }} />
                 </div>
-                
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontSize: 12, width: 60, fontWeight: 600 }}>↔️ רוחב:</span>
                   <input type="range" min="0" max="100" value={form.photoX !== undefined ? form.photoX : 50} onChange={(e) => set("photoX", parseInt(e.target.value))} style={{ flex: 1, direction: "ltr" }} />
@@ -1202,6 +1215,16 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
               </div>
             )}
             
+            <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: C.mid, marginBottom: 8 }}>🎓 רמת קושי באקדמיה (1-קל, 2-בינוני, 3-קשה)</label>
+            <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+              {[1, 2, 3].map((lvl) => {
+                const isSel = form.academyDifficulty === lvl || (!form.academyDifficulty && lvl === 2);
+                return (
+                  <button key={lvl} onClick={() => set("academyDifficulty", lvl)} className="btn" style={{ flex: 1, padding: "10px", borderRadius: 12, border: `2px solid ${isSel ? C.primary : C.border}`, background: isSel ? C.primary + "15" : "white", color: isSel ? C.primary : C.mid, fontWeight: 700, fontSize: 13 }}>רמה {lvl}</button>
+                );
+              })}
+            </div>
+
             <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: C.mid, marginBottom: 8 }}>אווטר (אם אין תמונה)</label>
             <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
               {AVATARS.map((av) => (
@@ -1237,13 +1260,13 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
       );
     }
 	
-	
 /* ─── Academy 🎓 ─── */
     function Academy({ child, data, onEarn, onBack }) {
       const [game, setGame] = useState(null); 
       const [q, setQ] = useState(null);
       const [ans, setAns] = useState("");
-      const [hint, setHint] = useState(null); // הוספנו מצב לשמירת הרמז
+      const [hint, setHint] = useState(null);
+      const [isPractice, setIsPractice] = useState(false); // מצב תרגול בלבד
       
       const todayStr = new Date().toDateString();
       const progressKey = `academy_${child.id}_${todayStr}`;
@@ -1257,40 +1280,77 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
 
       const TOTAL_QUESTIONS = 20;
       const REWARD_AMOUNT = 5;
+      const difficulty = child.academyDifficulty || 2; // שליפת רמת הקושי שהגדרנו
 
       useEffect(() => {
-        localStorage.setItem(progressKey, streak.toString());
-      }, [streak, progressKey]);
+        if (!isPractice) {
+          localStorage.setItem(progressKey, streak.toString());
+        }
+      }, [streak, progressKey, isPractice]);
 
       const startMath = () => {
-        const isLian = child.name === "ליאן";
-        const n1 = Math.floor(Math.random() * (isLian ? 50 : 20)) + 1;
-        const n2 = Math.floor(Math.random() * (isLian ? 20 : 10)) + 1;
-        const op = (isLian && Math.random() > 0.7) ? 'x' : '+';
-        setQ({ txt: `${n1} ${op === 'x' ? '×' : '+'} ${n2}`, a: op === '+' ? n1 + n2 : n1 * n2, type: 'num' });
+        let n1, n2, op, answer;
+
+        if (difficulty === 1) { // רמה 1 (קל) - רק חיבור עד 20
+          op = '+';
+          n1 = Math.floor(Math.random() * 10) + 1; // 1-10
+          n2 = Math.floor(Math.random() * 10) + 1; // 1-10
+          answer = n1 + n2;
+        } else if (difficulty === 2) { // רמה 2 (בינוני) - רק חיבור עד 100
+          op = '+';
+          n1 = Math.floor(Math.random() * 50) + 10; // 10-59
+          n2 = Math.floor(Math.random() * 40) + 10; // 10-49
+          answer = n1 + n2;
+        } else { // רמה 3 (מתקדם) - כפולות עד 10 וחיבור עד 100
+          const mode = Math.random();
+          if (mode > 0.5) {
+            op = 'x';
+            n1 = Math.floor(Math.random() * 9) + 2; // 2 עד 10
+            n2 = Math.floor(Math.random() * 9) + 2; // 2 עד 10
+            answer = n1 * n2;
+          } else {
+            op = '+';
+            n1 = Math.floor(Math.random() * 50) + 20; // 20-69
+            n2 = Math.floor(Math.random() * 30) + 10; // 10-39
+            answer = n1 + n2;
+          }
+        }
+
+        setQ({ txt: `${n1} ${op === 'x' ? '×' : op} ${n2}`, a: answer, type: 'num' });
         setHint(null);
+        setAns("");
         setGame('math');
       };
 
       const startEng = () => {
-        const item = ENGLISH_BANK[Math.floor(Math.random() * ENGLISH_BANK.length)];
-        setQ({ txt: `איך אומרים "${item.h}" באנגלית?`, a: item.e, type: 'txt' });
+        const correct = ENGLISH_BANK[Math.floor(Math.random() * ENGLISH_BANK.length)];
+        // שליפת 2 תשובות שגויות למסיחים
+        const wrongOptions = ENGLISH_BANK.filter(item => item.e !== correct.e)
+                                         .sort(() => 0.5 - Math.random())
+                                         .slice(0, 2);
+        
+        // ערבוב של 3 התשובות
+        const options = [correct.e, wrongOptions[0].e, wrongOptions[1].e].sort(() => 0.5 - Math.random());
+
+        setQ({ txt: `איך אומרים "${correct.h}" באנגלית?`, a: correct.e, options: options, type: 'mcq' });
         setHint(null);
+        setAns("");
         setGame('eng');
       };
 
-      const check = () => {
-        if (ans.toUpperCase().trim() == q.a.toString()) {
+      const checkAnswer = (providedAns = ans) => {
+        if (providedAns.toString().toUpperCase().trim() === q.a.toString()) {
           const newStreak = streak + 1;
           setStreak(newStreak);
           setAns("");
           setHint(null);
           
-          if (newStreak === TOTAL_QUESTIONS && !alreadyEarnedToday) {
+          if (newStreak === TOTAL_QUESTIONS && !alreadyEarnedToday && !isPractice) {
             onEarn(REWARD_AMOUNT, 'משימת אקדמיה יומית');
+            fireConfetti(); // <--- קונפטי!
             alert(`🎉 אלופים! עניתם על ${TOTAL_QUESTIONS} שאלות והרווחתם ${fmt(REWARD_AMOUNT)} לקופה!`);
             setGame(null);
-          } else if (newStreak >= TOTAL_QUESTIONS) {
+          } else if (newStreak >= TOTAL_QUESTIONS && !isPractice) {
              alert("מצוין! נמשיך מחר (את הפרס של היום כבר קיבלת 😉)");
              setGame(null);
           } else {
@@ -1306,16 +1366,18 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
               setHint(`💡 שיטה לחיבור: שימו בראש את המספר הגדול (${big}) ותוסיפו לו באצבעות עוד ${small}.`);
             } else if (q.txt.includes('×')) {
               const parts = q.txt.split('×').map(p => parseInt(p.trim()));
-              setHint(`💡 שיטה לכפל: כפל זה חיבור חוזר! זה לחבר את המספר ${parts[1]} לעצמו ${parts[0]} פעמים.`);
+              setHint(`💡 שיטה לכפל: כפל זה כמו חיבור. זה אומר לחבר את המספר ${parts[1]} לעצמו ${parts[0]} פעמים.`);
+            } else {
+               setHint(`💡 נסו שוב לאט ובזהירות.`);
             }
           } else if (game === 'eng') {
-             setHint(`💡 רמז: המילה מתחילה באות ${q.a.charAt(0)}`);
+             setHint(`💡 טעות. רמז: המילה מתחילה באות ${q.a.charAt(0)}`);
           }
-          setAns(""); // מנקה את התשובה השגויה כדי שינסו שוב
+          setAns(""); // מנקה את התשובה כדי שינסו שוב
         }
       };
 
-      if (alreadyEarnedToday && !game) {
+      if (alreadyEarnedToday && !game && !isPractice) {
         return (
           <div className="sl" style={{padding: 20}}>
             <BackBtn onBack={onBack} />
@@ -1323,7 +1385,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
               <div style={{fontSize: 50}}>🏆</div>
               <h2 style={{ color: C.primary, margin: "10px 0" }}>משימה הושלמה!</h2>
               <p style={{ color: C.soft, fontSize: 15 }}>סיימתם את משימת האקדמיה להיום והרווחתם {fmt(REWARD_AMOUNT)}.<br/>תחזרו מחר לאתגר חדש!</p>
-              <button onClick={() => setStreak(0)} className="btn" style={{ background: '#EEF2FF', padding: "10px 20px", borderRadius: 12, border: 'none', color: C.primary, fontWeight: 700, marginTop: 15 }}>תרגול נוסף לכיף (ללא פרס)</button>
+              <button onClick={() => { setIsPractice(true); setStreak(0); }} className="btn" style={{ background: '#EEF2FF', padding: "10px 20px", borderRadius: 12, border: 'none', color: C.primary, fontWeight: 700, marginTop: 15 }}>תרגול נוסף לכיף (ללא פרס)</button>
             </div>
           </div>
         );
@@ -1337,8 +1399,10 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
             <p style={{ color: C.soft, fontSize: 14, margin: "0 0 15px 0" }}>
               ענו על <b>{TOTAL_QUESTIONS} שאלות</b> נכון כדי להרוויח <b>{fmt(REWARD_AMOUNT)}</b>!
             </p>
-            <div style={{ background: '#FFFBEB', padding: 12, borderRadius: 12, marginBottom: 20, border: `2px solid ${C.amber}55` }}>
-              <b style={{color: C.amber, fontSize: 15}}>התקדמות היום: {streak} מתוך {TOTAL_QUESTIONS}</b>
+            {isPractice && <Badge color={C.primary}>מצב תרגול כיף (ללא פרס)</Badge>}
+            
+            <div style={{ background: '#FFFBEB', padding: 12, borderRadius: 12, marginBottom: 20, marginTop: 15, border: `2px solid ${C.amber}55` }}>
+              <b style={{color: C.amber, fontSize: 15}}>התקדמות: {streak} מתוך {TOTAL_QUESTIONS}</b>
               <div style={{marginTop: 8}}><ProgressBar pct={(streak / TOTAL_QUESTIONS) * 100} color={C.amber} h={10} /></div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
@@ -1355,25 +1419,35 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
           <div style={{padding: '30px 20px', background: 'white', borderRadius: 24, boxShadow: C.sh}}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 15, color: C.soft, fontWeight: "bold", fontSize: 14 }}>
               <span>שאלה {streak + 1} מתוך {TOTAL_QUESTIONS}</span>
-              <span>💰 פרס: {fmt(REWARD_AMOUNT)}</span>
+              <span>{isPractice ? '🎮 תרגול חופשי' : `💰 פרס: ${fmt(REWARD_AMOUNT)}`}</span>
             </div>
             <ProgressBar pct={(streak / TOTAL_QUESTIONS) * 100} color={C.green} h={8} />
             <div className="academy-q" style={{marginTop: 30}}>{q.txt}</div>
             
-            {/* הצגת הרמז אם הילד טעה */}
             {hint && (
               <div style={{background: '#FEF2F2', border: `2px solid ${C.red}55`, borderRadius: 12, padding: 12, marginBottom: 20, color: C.red, fontSize: 14, fontWeight: 700}}>
                 {hint}
               </div>
             )}
 
-            <input type={q.type === 'num' ? 'number' : 'text'} value={ans} onChange={e => setAns(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} style={{ width: '100%', fontSize: 32, textAlign: 'center', padding: 15, borderRadius: 15, border: `3px solid ${C.border}`, marginBottom: 20 }} placeholder="תשובה..." autoFocus />
-            <button onClick={check} className="btn" style={{ width: '100%', background: C.green, color: 'white', padding: 18, borderRadius: 15, fontWeight: 900, fontSize: 18 }}>בדוק תשובה ✅</button>
+            {q.type === 'mcq' ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+                {q.options.map((opt, i) => (
+                  <button key={i} onClick={() => checkAnswer(opt)} className="btn" style={{ width: '100%', padding: 16, borderRadius: 15, border: `3px solid ${C.border}`, background: "white", fontSize: 20, fontWeight: 800, color: C.text }}>
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <>
+                <input type="number" value={ans} onChange={e => setAns(e.target.value)} onKeyDown={e => e.key === 'Enter' && checkAnswer()} style={{ width: '100%', fontSize: 32, textAlign: 'center', padding: 15, borderRadius: 15, border: `3px solid ${C.border}`, marginBottom: 20 }} placeholder="תשובה..." autoFocus />
+                <button onClick={() => checkAnswer()} className="btn" style={{ width: '100%', background: C.green, color: 'white', padding: 18, borderRadius: 15, fontWeight: 900, fontSize: 18 }}>בדוק תשובה ✅</button>
+              </>
+            )}
           </div>
         </div>
       );
     }
-	
 	
 /* ══════════════════════════════════════════════
        CHILD DASHBOARD
@@ -1384,8 +1458,13 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
       const [currentTime, setCurrentTime] = useState("");
       const playedFor = useRef(new Set());
       
-      // שעון ובדיקת התראות
+      // שעון ובדיקת התראות משודרג
       useEffect(() => {
+        // מבקשים אישור התראות קופצות בטעינה הראשונה אם עדיין לא אישרו/סירבו
+        if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+          Notification.requestPermission();
+        }
+
         const interval = setInterval(() => {
           const d = new Date();
           const hhmm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -1393,6 +1472,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
 
           const activeTasks = data.tasks.filter(t => t.assignedTo.includes(child.id) && t.active);
           let shouldRing = false;
+          let taskNameForNotification = "";
 
           activeTasks.forEach(t => {
              if (t.remindTime && t.remindTime === hhmm) {
@@ -1400,17 +1480,28 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
                 const isDone = data.completions.some(c => c.taskId === t.id && c.childId === child.id && 
                   (c.status === 'pending' || (c.status === 'approved' && Date.now() - new Date(c.completedAt).getTime() < 86400000)));
                 
-                // משמיע צליל פעם אחת בלבד לאותה דקה
+                // משמיע צליל ומקפיץ התראה פעם אחת בלבד לאותה דקה
                 if (!isDone && !playedFor.current.has(t.id + hhmm)) {
                    shouldRing = true;
+                   taskNameForNotification = t.name;
                    playedFor.current.add(t.id + hhmm);
                 }
              }
           });
 
           if (shouldRing) {
+             // צליל
              const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
              audio.play().catch(e => console.log('Audio blocked by browser', e));
+
+             // התראה קופצת + רטט
+             if ("Notification" in window && Notification.permission === "granted") {
+               new Notification("תזכורת למשימה! 🔔", { 
+                 body: `הגיע הזמן לביצוע: ${taskNameForNotification}`, 
+                 icon: "https://emojicdn.elk.sh/🌟" 
+               });
+               if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+             }
           }
         }, 5000); // בודק כל 5 שניות
         return () => clearInterval(interval);
@@ -1419,12 +1510,8 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
       if (section === "academy") {
         return <Academy child={child} data={data} onEarn={onEarn} onBack={() => setSection("tasks")} />;
       }
-
-
-	  
-	  
       
-      const todayTasks  = data.tasks.filter((t) => t.assignedTo.includes(child.id) && t.active && ["daily","weekdays"].includes(t.frequency));
+      const todayTasks  = data.tasks.filter((t) => t.assignedTo.includes(child.id) && t.active && t.frequency !== "ondemand"); 
       const demandTasks = data.tasks.filter((t) => t.assignedTo.includes(child.id) && t.active && t.frequency === "ondemand");
       const myPending   = data.completions.filter((c) => c.childId === child.id && c.status === "pending");
       const myTxns      = data.transactions.filter((t) => t.childId === child.id).slice().reverse().slice(0, 8);
@@ -1652,6 +1739,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
         const t  = data.tasks.find((x) => x.id === cp?.taskId);
         if (!cp || !t) return;
         
+        fireConfetti(); // <--- קונפטי למסך אישור!
         setData((prev) => {
           let ch = [...prev.children];
           let tr = [...prev.transactions];
@@ -1673,7 +1761,6 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
       }
 
       function saveTask(t) {
-        // הוספת "מאת מי" אם זה חדש
         const taskWithAuthor = { ...t, createdBy: t.createdBy || loggedParent.name };
         setData((prev) => ({ ...prev, tasks: prev.tasks.find((x) => x.id === t.id) ? prev.tasks.map((x) => x.id === t.id ? taskWithAuthor : x) : [...prev.tasks, taskWithAuthor] }));
         showToast(subParam ? "✅ משימה עודכנה" : "✅ משימה נוצרה");
@@ -1922,6 +2009,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
         if (!t) return;
         
         if (!t.requiresApproval) {
+          fireConfetti(); // <--- קונפטי לילד בסיום משימה רגילה
           setData((prev) => {
             let ch = [...prev.children];
             let tr = [...prev.transactions];
