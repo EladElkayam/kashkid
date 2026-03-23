@@ -1442,7 +1442,8 @@
       );
     }
 	
-    /* ══════════════════════════════════════════════
+
+	/* ══════════════════════════════════════════════
        CHILD DASHBOARD
     ══════════════════════════════════════════════ */
 
@@ -1450,9 +1451,9 @@
       const [section, setSection] = useState("tasks");
       const [currentTime, setCurrentTime] = useState("");
       const playedFor = useRef(new Set());
-      const lastPing = useRef(0);
+      const lastPing = useRef(0); // <--- זו השורה שגרמה למסך השחור!
       
-      // שעון ובדיקת התראות
+      // שעון ובדיקת התראות משודרג
       useEffect(() => {
         if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
           Notification.requestPermission();
@@ -1466,11 +1467,15 @@
             audio.play().catch(e => console.log('Audio blocked', e));
             
             if ("Notification" in window && Notification.permission === "granted") {
-               new Notification("בדיקת מערכת! 🔔", { 
-                 body: `היי ${child.name}, ההתראות עובדות מעולה!`, 
-                 icon: "https://emojicdn.elk.sh/🌟" 
-               });
-               if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+               try {
+                 new Notification("בדיקת מערכת! 🔔", { 
+                   body: `היי ${child.name}, ההתראות עובדות מעולה!`, 
+                   icon: "https://emojicdn.elk.sh/🌟" 
+                 });
+                 if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+               } catch (e) {
+                 console.log("Notification error", e);
+               }
             }
           }
         }
@@ -1486,9 +1491,11 @@
 
           activeTasks.forEach(t => {
              if (t.remindTime && t.remindTime === hhmm) {
+                // בודקים אם המשימה לא בוצעה או ממתינה היום
                 const isDone = data.completions.some(c => c.taskId === t.id && c.childId === child.id && 
                   (c.status === 'pending' || (c.status === 'approved' && Date.now() - new Date(c.completedAt).getTime() < 86400000)));
                 
+                // משמיע צליל ומקפיץ התראה פעם אחת בלבד לאותה דקה
                 if (!isDone && !playedFor.current.has(t.id + hhmm)) {
                    shouldRing = true;
                    taskNameForNotification = t.name;
@@ -1498,18 +1505,24 @@
           });
 
           if (shouldRing) {
+             // צליל
              const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-             audio.play().catch(e => console.log('Audio blocked', e));
+             audio.play().catch(e => console.log('Audio blocked by browser', e));
 
+             // התראה קופצת + רטט
              if ("Notification" in window && Notification.permission === "granted") {
-               new Notification("תזכורת למשימה! 🔔", { 
-                 body: `הגיע הזמן לביצוע: ${taskNameForNotification}`, 
-                 icon: "https://emojicdn.elk.sh/🌟" 
-               });
-               if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+               try {
+                 new Notification("תזכורת למשימה! 🔔", { 
+                   body: `הגיע הזמן לביצוע: ${taskNameForNotification}`, 
+                   icon: "https://emojicdn.elk.sh/🌟" 
+                 });
+                 if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+               } catch(e) {
+                 console.log("Notification error", e);
+               }
              }
           }
-        }, 5000);
+        }, 5000); // בודק כל 5 שניות
         return () => clearInterval(interval);
       }, [data.tasks, data.completions, data.ping, child.id]);
 
@@ -1547,6 +1560,7 @@
 
       return (
         <div style={{ minHeight: "100vh", background: C.bg, direction: "rtl" }}>
+          {/* header */}
           <div style={{ background: child.colorGrad, padding: "48px 20px 24px", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: -30, left: -30, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,.1)" }} />
             
@@ -1561,7 +1575,8 @@
                 <h2 style={{ color: "white", fontSize: 26, fontWeight: 900, margin: "2px 0 0 0" }}>{child.name}! 👋</h2>
               </div>
             </div>
-
+            
+            {/* כפתור להפעלת התראות */}
             <button onClick={enableNotifications} style={{ background: 'white', border: `none`, color: child.color, borderRadius: 10, padding: '6px 12px', fontSize: 12, fontWeight: 800, marginBottom: 16, boxShadow: C.ssm, display: "flex", alignItems: "center", gap: 5 }}>
               <span>🔔</span> הפעל התראות בטלפון זה
             </button>
@@ -1579,10 +1594,12 @@
 
           <div style={{ padding: "16px 16px 90px" }}>
             
+            {/* ACADEMY BUTTON */}
             <button onClick={() => setSection("academy")} className="btn card" style={{ width: '100%', background: C.primary, color: 'white', fontWeight: 900, fontSize: 19, padding: 22, border: 'none', borderRadius: 20, marginBottom: 25, boxShadow: `0 8px 20px ${C.primary}44` }}>
               🎓 האקדמיה: בואו להרוויח כסף!
             </button>
 
+            {/* saving goal */}
             <div style={{ background: "white", borderRadius: 20, padding: "14px 16px", boxShadow: C.sh, border: `2px solid ${child.colorLight}`, marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <p style={{ fontWeight: 700, fontSize: 14, color: C.text, margin: 0 }}>🎯 {child.savingGoal.name}</p>
@@ -1595,6 +1612,7 @@
               </div>
             </div>
 
+            {/* section tabs */}
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
               {[["tasks","📋 משימות"],["savings","💰 כסף"]].map(([id, l]) => (
                 <button key={id} onClick={() => setSection(id)} className="btn" style={{ flex: 1, padding: "11px", borderRadius: 14, border: "none", background: section === id ? child.color : "white", color: section === id ? "white" : C.mid, fontWeight: 700, fontSize: 14, boxShadow: C.ssm }}>
