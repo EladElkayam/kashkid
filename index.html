@@ -1,14 +1,16 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>משפחה במשימה</title>
 
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌟</text></svg>">
-  
   <link rel="apple-touch-icon" href="https://emojicdn.elk.sh/🌟">
   
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -167,7 +169,6 @@
 /* ── shared child avatar — shows photo from repo or emoji ── */
     function ChildAvatar({ child, size = 60, radius = 20 }) {
       if (child.photo && child.photo.trim() !== "") {
-        // משיכת נתוני החיתוך מהפרופיל (או ברירת מחדל של אמצע וללא זום)
         const px = child.photoX !== undefined ? child.photoX : 50;
         const py = child.photoY !== undefined ? child.photoY : 50;
         const scale = child.photoScale || 1;
@@ -180,9 +181,9 @@
               style={{ 
                 width: "100%", 
                 height: "100%", 
-                objectFit: "cover", // שומר על המסגרת המלאה
-                objectPosition: `${px}% ${py}%`, // מזיז את התמונה
-                transform: `scale(${scale})`, // עושה זום
+                objectFit: "cover",
+                objectPosition: `${px}% ${py}%`,
+                transform: `scale(${scale})`,
                 display: "block"
               }} 
               onError={(e) => { e.target.style.display = 'none'; }} 
@@ -1455,13 +1456,8 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
       const [currentTime, setCurrentTime] = useState("");
       const playedFor = useRef(new Set());
       
-      // שעון ובדיקת התראות משודרג
+      // שעון ובדיקת התראות
       useEffect(() => {
-        // מבקשים אישור התראות קופצות בטעינה הראשונה אם עדיין לא אישרו/סירבו
-        if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
-          Notification.requestPermission();
-        }
-
         const interval = setInterval(() => {
           const d = new Date();
           const hhmm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -1469,7 +1465,6 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
 
           const activeTasks = data.tasks.filter(t => t.assignedTo.includes(child.id) && t.active);
           let shouldRing = false;
-          let taskNameForNotification = "";
 
           activeTasks.forEach(t => {
              if (t.remindTime && t.remindTime === hhmm) {
@@ -1477,28 +1472,17 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
                 const isDone = data.completions.some(c => c.taskId === t.id && c.childId === child.id && 
                   (c.status === 'pending' || (c.status === 'approved' && Date.now() - new Date(c.completedAt).getTime() < 86400000)));
                 
-                // משמיע צליל ומקפיץ התראה פעם אחת בלבד לאותה דקה
+                // משמיע צליל פעם אחת בלבד לאותה דקה
                 if (!isDone && !playedFor.current.has(t.id + hhmm)) {
                    shouldRing = true;
-                   taskNameForNotification = t.name;
                    playedFor.current.add(t.id + hhmm);
                 }
              }
           });
 
           if (shouldRing) {
-             // צליל
              const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
              audio.play().catch(e => console.log('Audio blocked by browser', e));
-
-             // התראה קופצת + רטט
-             if ("Notification" in window && Notification.permission === "granted") {
-               new Notification("תזכורת למשימה! 🔔", { 
-                 body: `הגיע הזמן לביצוע: ${taskNameForNotification}`, 
-                 icon: "https://emojicdn.elk.sh/🌟" 
-               });
-               if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
-             }
           }
         }, 5000); // בודק כל 5 שניות
         return () => clearInterval(interval);
@@ -1725,6 +1709,9 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
       const [subParam, setSubParam] = useState(null);
       const isAdmin = loggedParent?.role === "admin";
       
+      // משתנה עזר: האם זה אלעד?
+      const isElad = loggedParent?.name === "אלעד";
+
       function go(screen, param = null) { setSub(screen); setSubParam(param); }
       function back() { setSub(null); setSubParam(null); }
       function backTo(screen) { setSub(screen); setSubParam(null); }
@@ -1758,6 +1745,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
       }
 
       function saveTask(t) {
+        // הוספת "מאת מי" אם זה חדש
         const taskWithAuthor = { ...t, createdBy: t.createdBy || loggedParent.name };
         setData((prev) => ({ ...prev, tasks: prev.tasks.find((x) => x.id === t.id) ? prev.tasks.map((x) => x.id === t.id ? taskWithAuthor : x) : [...prev.tasks, taskWithAuthor] }));
         showToast(subParam ? "✅ משימה עודכנה" : "✅ משימה נוצרה");
@@ -1834,7 +1822,11 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
           <div style={{ background: "white", borderBottom: `1px solid ${C.border}`, padding: "20px 20px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: C.ssm }}>
             {sub
               ? <button onClick={back} className="btn" style={{ background: "none", border: "none", color: C.primary, fontWeight: 700, fontSize: 24, padding: 0, lineHeight: 1 }}>→</button>
-              : <div style={{ fontWeight: 900, fontSize: 18, color: C.primary }}>שלום {loggedParent.name} 👋</div>
+              : <div style={{ fontWeight: 900, fontSize: 18, color: C.primary }}>
+                  שלום {loggedParent.name} 👋 
+                  {/* הוספת סמל מנהל רק אם השם הוא אלעד */}
+                  {loggedParent.name === "אלעד" && <span style={{ marginRight: '5px' }}>🛡️</span>}
+                </div>
             }
             <button onClick={onLogout} className="btn" style={{ background: "#F3F4F6", border: "none", borderRadius: 10, padding: "7px 13px", color: C.mid, fontWeight: 700, fontSize: 13 }}>יציאה</button>
           </div>
