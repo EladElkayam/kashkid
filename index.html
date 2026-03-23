@@ -1460,7 +1460,7 @@
     }
 	
 
-    /* ══════════════════════════════════════════════
+	/* ══════════════════════════════════════════════
        CHILD DASHBOARD
     ══════════════════════════════════════════════ */
 
@@ -1529,9 +1529,7 @@
         return () => clearInterval(interval);
       }, [data.tasks, data.completions, child.id]);
 
-
-
-	  // 3. הפעלת התראות ומשיכת הטוקן (עכשיו גם שומר לענן!)
+      // 3. הפעלת התראות ומשיכת הטוקן לענן
       const enableNotifications = async () => {
         if (!("Notification" in window)) {
           alert("הדפדפן שלך לא תומך בהתראות קופצות");
@@ -1548,7 +1546,7 @@
             
             if (currentToken) {
               console.log("FCM Token:", currentToken);
-              // התיקון כאן: הפקודה שמעלה את הטוקן לפיירבייס כדי שאבא יראה אותו!
+              // שמירת הטוקן בענן בצורה בטוחה!
               setData(prev => ({
                 ...prev,
                 children: prev.children.map(c => c.id === child.id ? { ...c, fcmToken: currentToken } : c)
@@ -1599,10 +1597,17 @@
               </div>
             </div>
             
-            {/* כפתור הפעלת התראות PUSH */}
-            <button onClick={enableNotifications} style={{ background: 'white', border: `none`, color: child.color, borderRadius: 10, padding: '8px 12px', fontSize: 13, fontWeight: 800, marginBottom: 16, boxShadow: C.ssm, display: "flex", alignItems: "center", gap: 5 }}>
-              <span>🔔</span> הירשם להתראות חכמות
-            </button>
+            {/* כפתור הפעלת התראות ותווית אישור */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8, marginBottom: 16 }}>
+              <button onClick={enableNotifications} style={{ background: 'white', border: `none`, color: child.color, borderRadius: 10, padding: '8px 12px', fontSize: 13, fontWeight: 800, boxShadow: C.ssm, display: "flex", alignItems: "center", gap: 5 }}>
+                <span>🔔</span> הירשם להתראות חכמות
+              </button>
+              {child.fcmToken && (
+                <span style={{ background: C.green, color: "white", padding: "4px 10px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
+                  ✅ מחובר לשרת ההתראות
+                </span>
+              )}
+            </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
               {[["💰","יתרה",fmt(child.balance)],["⭐","נקודות",`${child.points}`],["📤","ממתינות",`${myPending.length}`]].map(([ic,l,v]) => (
@@ -1693,13 +1698,17 @@
       );
     }
 
-    /* ══════════════════════════════════════════════
+
+	/* ══════════════════════════════════════════════
        PARENT SHELL
     ══════════════════════════════════════════════ */
     function ParentShell({ data, setData, onLogout, showToast, loggedParent }) {
       const [tab, setTab] = useState("children"); 
       const [sub, setSub] = useState(null); 
       const [subParam, setSubParam] = useState(null);
+      // שימוש ב-setDataRaw כדי שנוכל לעדכן את המסך בלי לשמור מחדש לפיירבייס במשיכה
+      const { setDataRaw } = window; // נמשוך מהקשר גלובלי או נסתמך על רענון
+
       const isAdmin = loggedParent?.role === "admin"; 
       const isElad = loggedParent?.name === "אלעד";
 
@@ -1727,14 +1736,21 @@
       function deleteTask(id) { setData((prev) => ({ ...prev, tasks: prev.tasks.filter((t) => t.id !== id) })); showToast("🗑️ נמחקה", "warn"); back(); }
       function saveChild(ch) { setData((prev) => ({ ...prev, children: prev.children.find((x) => x.id === ch.id) ? prev.children.map((x) => x.id === ch.id ? ch : x) : [...prev.children, ch] })); showToast("✅ ילד נשמר"); backTo("fm"); }
       
-      // 📡 פונקציית הפינג החכמה שלנו למנהל
-      function pingChild(childId) {
-        const c = data.children.find(x => x.id === childId);
-        if (c && c.fcmToken) {
-          // מציגים לך את הטוקן כדי שתוכל להעתיק אותו לפיירבייס!
-          prompt(`הטוקן של ${c.name} מוכן! העתק אותו כדי לשלוח התראה ממסוף Firebase:`, c.fcmToken);
-        } else {
-          showToast("⚠️ לילד זה אין עדיין אישור התראות בטלפון", "error");
+      // 📡 פונקציית הפינג החכמה שלנו למנהל (מושכת נתונים חיים מהשרת!)
+      async function pingChild(childId) {
+        showToast("מתחבר לשרת לחפש טוקן...", "success");
+        try {
+          const remote = await fbLoad();
+          if (remote) {
+            const c = remote.children.find(x => x.id === childId);
+            if (c && c.fcmToken) {
+              prompt(`הטוקן של ${c.name} מוכן! העתק אותו כדי לשלוח התראה ממסוף Firebase:`, c.fcmToken);
+            } else {
+              alert("⚠️ עדיין אין טוקן בשרת. גש לאייפון של הילד, רענן את הדף ולחץ שוב על 'הירשם להתראות'.");
+            }
+          }
+        } catch(e) {
+          showToast("שגיאה בהתחברות לשרת", "error");
         }
       }
 
