@@ -1464,7 +1464,7 @@
        CHILD DASHBOARD
     ══════════════════════════════════════════════ */
 
-    function ChildDashboard({ child, data, onComplete, onEarn }) {
+    function ChildDashboard({ child, data, onComplete, onEarn, setData }) {
       const [section, setSection] = useState("tasks");
       const [currentTime, setCurrentTime] = useState("");
       const playedFor = useRef(new Set());
@@ -1530,7 +1530,8 @@
       }, [data.tasks, data.completions, child.id]);
 
 
-	  // 3. הפעלת התראות ומשיכת הטוקן (מתוקן לגיטהאב!)
+
+	  // 3. הפעלת התראות ומשיכת הטוקן (עכשיו גם שומר לענן!)
       const enableNotifications = async () => {
         if (!("Notification" in window)) {
           alert("הדפדפן שלך לא תומך בהתראות קופצות");
@@ -1539,21 +1540,21 @@
         try {
           const permission = await Notification.requestPermission();
           if (permission === "granted") {
-            
-            // התיקון כאן: אנחנו רושמים את הקובץ באופן ידני כדי שגיטהאב ימצא אותו
             const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-            
             const currentToken = await messaging.getToken({ 
               vapidKey: "BCX5pKraF9jGMccFy6UUPMNiBKU7830dz-4YMjRGVLS9iYMgAdqIUx5K65Qg0_dYybPaeOQS4g6HXoJUzEspTk4",
-              serviceWorkerRegistration: registration // <--- אומרים לפיירבייס להשתמש ברישום שעשינו
+              serviceWorkerRegistration: registration
             });
             
             if (currentToken) {
               console.log("FCM Token:", currentToken);
-              // שמירת הטוקן אצל הילד!
-              data.children.find(c => c.id === child.id).fcmToken = currentToken;
+              // התיקון כאן: הפקודה שמעלה את הטוקן לפיירבייס כדי שאבא יראה אותו!
+              setData(prev => ({
+                ...prev,
+                children: prev.children.map(c => c.id === child.id ? { ...c, fcmToken: currentToken } : c)
+              }));
               fireConfetti();
-              alert("מעולה! הטלפון חובר בהצלחה. בקש מאבא לשלוח התראת בדיקה!");
+              alert("מעולה! הטלפון חובר בהצלחה. ה-Token נשמר לענן, בקש מאבא לשלוח התראת בדיקה!");
             } else {
               alert("לא הצלחנו למשוך טוקן מגוגל.");
             }
@@ -1841,7 +1842,7 @@
           {screen === "childSelect" && <ChildSelectScreen children={data.children} onSelect={(ch) => { setPinTarget(ch); setScreen("childPin"); }} onBack={() => setScreen("splash")} />}
           {screen === "childPin" && pinTarget && <ChildPinScreen child={data.children.find((c) => c.id === pinTarget.id) || pinTarget} onSuccess={() => { setLoggedChild(pinTarget.id); setScreen("child"); }} onBack={() => setScreen("childSelect")} />}
           {screen === "parent" && loggedParent && <ParentShell data={data} setData={setData} loggedParent={loggedParent} onLogout={() => { setLoggedParent(null); setScreen("splash"); }} showToast={showToast} />}
-          {screen === "child" && loggedChild && <ChildDashboard child={data.children.find((c) => c.id === loggedChild)} data={data} onComplete={completeTask} onEarn={onEarnAcademy} />}
+          {screen === "child" && loggedChild && <ChildDashboard child={data.children.find((c) => c.id === loggedChild)} data={data} onComplete={completeTask} onEarn={onEarnAcademy} setData={setData} />}
         </div>
       );
     }
