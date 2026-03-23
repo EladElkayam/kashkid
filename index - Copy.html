@@ -23,7 +23,6 @@
     .sl { padding-bottom: 24px; }
     /* הסתרת פס גלילה לאסתטיקה */
     ::-webkit-scrollbar { width: 0px; background: transparent; }
-    .academy-q { font-size: 42px; font-weight: 900; color: #6C63FF; margin: 20px 0; text-align: center; }
   </style>
 </head>
 <body>
@@ -48,6 +47,8 @@
       ssm: "0 1px 8px rgba(0,0,0,.07)",
     };
 
+    const PARENT_PIN = "1234";
+
     /* ─── helpers ─── */
     const calcAge = (y) => new Date().getFullYear() - y;
     const fmt = (n) => `${Math.abs(n).toFixed(2)} ₪`;
@@ -60,13 +61,6 @@
       const dt = new Date(iso);
       return `${dt.getDate()}/${dt.getMonth() + 1}`;
     };
-
-    const ENGLISH_BANK = [
-      { h: "כלב", e: "DOG" }, { h: "חתול", e: "CAT" }, { h: "בית", e: "HOUSE" },
-      { h: "תפוח", e: "APPLE" }, { h: "שמש", e: "SUN" }, { h: "מים", e: "WATER" },
-      { h: "ספר", e: "BOOK" }, { h: "אוטו", e: "CAR" }, { h: "לחם", e: "BREAD" },
-      { h: "חלב", e: "MILK" }, { h: "ילד", e: "BOY" }, { h: "ילדה", e: "GIRL" }
-    ];
 
     const TASK_TYPES = {
       routine: { label: "שגרה",    icon: "🔄", color: "#6366F1", bg: "#EEF2FF" },
@@ -94,11 +88,55 @@
     /* ─── seed data ─── */
     const INIT_DATA = {
       children: [
-        { id: "c1", name: "אליה", username: "elia", birthYear: 2017, birthDate: "15/03/2017", pin: "2017", gender: "boy", avatar: "🧒", photo: "", color: "#6366F1", colorLight: "#EEF2FF", colorGrad: "linear-gradient(135deg,#6366F1,#8B5CF6)", balance: 0, totalEarned: 0, totalSpent: 0, points: 0, savingGoal: { name: "קורקינט חדש", targetAmount: 299 } },
-        { id: "c2", name: "ליאן", username: "lian", birthYear: 2016, birthDate: "22/07/2016", pin: "2016", gender: "girl", avatar: "👧", photo: "", color: "#EC4899", colorLight: "#FDF2F8", colorGrad: "linear-gradient(135deg,#EC4899,#F472B6)", balance: 0, totalEarned: 0, totalSpent: 0, points: 0, savingGoal: { name: "אוזניות אלחוטיות", targetAmount: 200 } },
+        {
+          id: "c1", name: "אליה", username: "elia", birthYear: 2017, birthDate: "15/03/2017",
+          pin: "2017", gender: "boy", avatar: "🧒",
+          color: "#6366F1", colorLight: "#EEF2FF",
+          colorGrad: "linear-gradient(135deg,#6366F1,#8B5CF6)",
+          balance: 45.50, totalEarned: 127, totalSpent: 81.50, points: 340,
+          savingGoal: { name: "קורקינט חדש", targetAmount: 299 },
+        },
+        {
+          id: "c2", name: "ליאן", username: "lian", birthYear: 2016, birthDate: "22/07/2016",
+          pin: "2016", gender: "girl", avatar: "👧",
+          color: "#EC4899", colorLight: "#FDF2F8",
+          colorGrad: "linear-gradient(135deg,#EC4899,#F472B6)",
+          balance: 78, totalEarned: 210, totalSpent: 132, points: 580,
+          savingGoal: { name: "אוזניות אלחוטיות", targetAmount: 200 },
+        },
       ],
-      sharedMission: "לסדר את הבית ביחד",
-      tasks: [], completions: [], transactions: [],
+      tasks: [
+        { id: "t1",  name: "צחצוח שיניים בבוקר", desc: "לפחות 2 דקות",         type: "routine", icon: "🦷", rewardType: "money",  rewardAmount: 1,  rewardPoints: 0, requiresApproval: false, frequency: "daily",    assignedTo: ["c1","c2"], active: true },
+        { id: "t2",  name: "צחצוח שיניים בערב",  desc: "לפני השינה",           type: "routine", icon: "🦷", rewardType: "money",  rewardAmount: 1,  rewardPoints: 0,  requiresApproval: false, frequency: "daily",    assignedTo: ["c1","c2"], active: true },
+        { id: "t3",  name: "שיעורי בית",          desc: "לסיים את כל השיעורים", type: "routine", icon: "📚", rewardType: "both",   rewardAmount: 3,  rewardPoints: 10, requiresApproval: true,  frequency: "weekdays", assignedTo: ["c1","c2"], active: true },
+        { id: "t4",  name: "סידור החדר",          desc: "לסדר לפני השינה",      type: "routine", icon: "🛏", rewardType: "money",  rewardAmount: 5,  rewardPoints: 0,  requiresApproval: true,  frequency: "daily",    assignedTo: ["c1","c2"], active: true },
+        { id: "t5",  name: "מקלחת",              desc: "",                     type: "routine", icon: "🚿", rewardType: "money",  rewardAmount: 2,  rewardPoints: 0,  requiresApproval: false, frequency: "daily",    assignedTo: ["c1","c2"], active: true },
+        { id: "t6",  name: "הכנת תיק",           desc: "לארוז תיק לבית ספר",   type: "routine", icon: "🎒", rewardType: "points", rewardAmount: 0,  rewardPoints: 5,  requiresApproval: false, frequency: "weekdays", assignedTo: ["c1","c2"], active: true },
+        { id: "t7",  name: "פינוי שולחן",        desc: "לאסוף כלים",            type: "chore",   icon: "🍽", rewardType: "money",  rewardAmount: 2,  rewardPoints: 5,  requiresApproval: false, frequency: "ondemand", assignedTo: ["c1","c2"], active: true },
+        { id: "t8",  name: "עזרה במטבח",         desc: "לעזור בהכנת ארוחה",    type: "chore",   icon: "🍳", rewardType: "money",  rewardAmount: 4,  rewardPoints: 15, requiresApproval: true,  frequency: "ondemand", assignedTo: ["c1","c2"], active: true },
+        { id: "t9",  name: "הוצאת זבל",          desc: "",                     type: "chore",   icon: "🗑", rewardType: "money",  rewardAmount: 3,  rewardPoints: 0,  requiresApproval: false, frequency: "ondemand", assignedTo: ["c1","c2"], active: true },
+        { id: "t10", name: "ציון מצוין במבחן",   desc: "ציון 90 ומעלה",         type: "bonus",   icon: "⭐", rewardType: "both",   rewardAmount: 10, rewardPoints: 50, requiresApproval: true,  frequency: "onetime",  assignedTo: ["c1","c2"], active: true },
+      ],
+      completions: [
+        { id: "cp1", taskId: "t3", childId: "c1", status: "pending",  completedAt: new Date(Date.now() - 3600000).toISOString(),   parentNote: "" },
+        { id: "cp2", taskId: "t4", childId: "c2", status: "pending",  completedAt: new Date(Date.now() - 7200000).toISOString(),   parentNote: "" },
+        { id: "cp3", taskId: "t8", childId: "c1", status: "pending",  completedAt: new Date(Date.now() - 1800000).toISOString(),   parentNote: "" },
+        { id: "cp4", taskId: "t3", childId: "c2", status: "approved", completedAt: new Date(Date.now() - 86400000).toISOString(),  approvedAt: new Date(Date.now() - 82000000).toISOString(), parentNote: "כל הכבוד!" },
+        { id: "cp5", taskId: "t4", childId: "c1", status: "approved", completedAt: new Date(Date.now() - 172800000).toISOString(), approvedAt: new Date(Date.now() - 170000000).toISOString(), parentNote: "" },
+        { id: "cp6", taskId: "t8", childId: "c2", status: "rejected", completedAt: new Date(Date.now() - 259200000).toISOString(), approvedAt: new Date(Date.now() - 255000000).toISOString(), parentNote: "לא בוצע כמו שצריך" },
+      ],
+      transactions: [
+        { id: "tr1",  childId: "c1", type: "earning", amount:  5,   desc: "סידור החדר",    date: new Date(Date.now() - 172800000).toISOString() },
+        { id: "tr2",  childId: "c1", type: "earning", amount:  3,   desc: "שיעורי בית",    date: new Date(Date.now() - 259200000).toISOString() },
+        { id: "tr3",  childId: "c1", type: "expense", amount: -15,  desc: "קנייה בחנות",   date: new Date(Date.now() - 432000000).toISOString() },
+        { id: "tr4",  childId: "c1", type: "bonus",   amount:  10,  desc: "בונוס מאמא",    date: new Date(Date.now() - 604800000).toISOString() },
+        { id: "tr5",  childId: "c1", type: "earning", amount:  1,   desc: "צחצוח שיניים", date: new Date(Date.now() - 86400000).toISOString()  },
+        { id: "tr6",  childId: "c2", type: "earning", amount:  5,   desc: "סידור החדר",    date: new Date(Date.now() - 86400000).toISOString()  },
+        { id: "tr7",  childId: "c2", type: "earning", amount:  3,   desc: "שיעורי בית",    date: new Date(Date.now() - 172800000).toISOString() },
+        { id: "tr8",  childId: "c2", type: "bonus",   amount:  20,  desc: "בונוס מאבא",    date: new Date(Date.now() - 345600000).toISOString() },
+        { id: "tr9",  childId: "c2", type: "expense", amount: -30,  desc: "קנייה בחנות",   date: new Date(Date.now() - 518400000).toISOString() },
+        { id: "tr10", childId: "c2", type: "earning", amount:  4,   desc: "עזרה במטבח",    date: new Date(Date.now() - 43200000).toISOString()  },
+      ],
     };
 
     /* ══════════════════════════════════════════════
@@ -121,7 +159,9 @@
       );
     }
 
-    function Divider() { return <div style={{ height: 1, background: C.border, margin: "12px 0" }} />; }
+    function Divider() {
+      return <div style={{ height: 1, background: C.border, margin: "12px 0" }} />;
+    }
 
     function BackBtn({ onBack, label = "חזרה" }) {
       return (
@@ -149,39 +189,7 @@
         </div>
       );
     }
-	
-/* ── shared child avatar — shows photo from repo or emoji ── */
-    function ChildAvatar({ child, size = 60, radius = 20 }) {
-      if (child.photo && child.photo.trim() !== "") {
-        // משיכת נתוני החיתוך מהפרופיל (או ברירת מחדל של אמצע וללא זום)
-        const px = child.photoX !== undefined ? child.photoX : 50;
-        const py = child.photoY !== undefined ? child.photoY : 50;
-        const scale = child.photoScale || 1;
-        
-        return (
-          <div style={{ width: size, height: size, borderRadius: radius, overflow: "hidden", flexShrink: 0, boxShadow: `0 4px 12px ${child.color}40`, background: child.colorLight, position: "relative" }}>
-            <img 
-              src={child.photo} 
-              alt={child.name} 
-              style={{ 
-                width: "100%", 
-                height: "100%", 
-                objectFit: "cover", // שומר על המסגרת המלאה
-                objectPosition: `${px}% ${py}%`, // מזיז את התמונה
-                transform: `scale(${scale})`, // עושה זום
-                display: "block"
-              }} 
-              onError={(e) => { e.target.style.display = 'none'; }} 
-            />
-          </div>
-        );
-      }
-      return (
-        <div style={{ width: size, height: size, borderRadius: radius, background: child.colorGrad, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.48, flexShrink: 0, boxShadow: `0 4px 12px ${child.color}40` }}>
-          {child.avatar}
-        </div>
-      );
-    }
+
     /* ─── PIN pad ─── */
     function PinEntry({ onSubmit, error, resetKey }) {
       const [pin, setPin] = useState("");
@@ -238,6 +246,7 @@
               <span>⭐</span> כניסת ילד
             </button>
           </div>
+          <p style={{ color: "rgba(255,255,255,.45)", fontSize: 12, marginTop: 40 }}>סיסמת הורה לדמו: 1234</p>
         </div>
       );
     }
@@ -247,13 +256,8 @@
       const [err, setErr] = useState("");
       
       function go() {
-        if (pw === "1234") {
-          onSuccess({ name: "אלעד", role: "admin" });
-        } else if (pw === "5555") {
-          onSuccess({ name: "זיוית", role: "parent" });
-        } else {
-          setErr("סיסמה שגויה, נסה שוב");
-        }
+        if (pw === PARENT_PIN) onSuccess();
+        else setErr("סיסמה שגויה, נסה שוב");
       }
 
       return (
@@ -275,8 +279,8 @@
                 style={{ width: "100%", padding: "14px 16px", borderRadius: 12, border: `2px solid ${err ? C.red : C.border}`, fontSize: 20, textAlign: "center", letterSpacing: 6, color: C.text, marginBottom: 8 }}
               />
               {err && <p style={{ color: C.red, fontSize: 13, marginBottom: 8, textAlign: "center", fontWeight: 600 }}>{err}</p>}
+              <p style={{ color: C.soft, fontSize: 12, marginBottom: 16, textAlign: "center" }}>סיסמת דמו: 1234</p>
               <button onClick={go} className="btn" style={{ width: "100%", padding: 15, borderRadius: 14, border: "none", background: C.primary, color: "white", fontSize: 17, fontWeight: 700 }}>כניסה</button>
-              <p style={{ color: C.soft, fontSize: 11, marginTop: 15, textAlign: "center" }}>אלעד: 1234 | זיוית: 5555</p>
             </div>
           </div>
         </div>
@@ -298,8 +302,8 @@
                 <button key={ch.id} onClick={() => onSelect(ch)} className="btn" style={{ display: "flex", alignItems: "center", gap: 16, padding: "18px 20px", borderRadius: 22, border: "none", background: "white", boxShadow: "0 8px 28px rgba(0,0,0,.14)", textAlign: "right" }}>
                   <ChildAvatar child={ch} size={58} radius={18} />
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 800, fontSize: 19, color: C.text, margin: 0 }}>{ch.name}</p>
-                    <p style={{ color: C.soft, fontSize: 13, marginTop: 2, margin: 0 }}>גיל {calcAge(ch.birthYear)}</p>
+                    <p style={{ fontWeight: 800, fontSize: 19, color: C.text }}>{ch.name}</p>
+                    <p style={{ color: C.soft, fontSize: 13, marginTop: 2 }}>גיל {calcAge(ch.birthYear)}</p>
                   </div>
                   <span style={{ color: ch.color, fontSize: 22 }}>←</span>
                 </button>
@@ -342,17 +346,14 @@
        BOTTOM NAV
     ══════════════════════════════════════════════ */
 
-    function BottomNav({ active, onChange, pendingBadge, isAdmin }) {
+    function BottomNav({ active, onChange, pendingBadge }) {
       const tabs = [
         { id: "children",  icon: "👨‍👩‍👧", label: "ילדים" },
         { id: "tasks",     icon: "✅",    label: "משימות" },
         { id: "approvals", icon: "🔔",   label: "אישורים", badge: pendingBadge },
         { id: "savings",   icon: "💰",   label: "חיסכון" },
+        { id: "settings",  icon: "⚙️",   label: "הגדרות" },
       ];
-      
-      if (isAdmin) {
-        tabs.push({ id: "settings", icon: "⚙️", label: "הגדרות" });
-      }
       
       return (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "white", borderTop: `1px solid ${C.border}`, display: "flex", paddingBottom: 8, paddingTop: 6, boxShadow: "0 -4px 20px rgba(0,0,0,.07)", zIndex: 100 }}>
@@ -373,16 +374,17 @@
         </div>
       );
     }
-/* ══════════════════════════════════════════════
+
+    /* ══════════════════════════════════════════════
        PARENT — CHILDREN TAB
     ══════════════════════════════════════════════ */
 
-    function ChildrenTab({ data, setData, onChildClick, onAddChild, isAdmin }) {
+    function ChildrenTab({ data, onChildClick, onAddChild }) {
       return (
         <div className="sc">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, marginTop: 10 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: C.text, margin: 0 }}>הילדים שלנו</h2>
-            {isAdmin && <button onClick={onAddChild} className="btn" style={{ background: C.primary, color: "white", border: "none", borderRadius: 12, padding: "8px 16px", fontWeight: 700, fontSize: 14 }}>+ הוסף</button>}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: C.text }}>הילדים שלנו</h2>
+            <button onClick={onAddChild} className="btn" style={{ background: C.primary, color: "white", border: "none", borderRadius: 12, padding: "8px 16px", fontWeight: 700, fontSize: 14 }}>+ הוסף</button>
           </div>
           {data.children.map((ch) => {
             const pct = Math.min(100, (ch.balance / ch.savingGoal.targetAmount) * 100);
@@ -420,8 +422,7 @@
         </div>
       );
     }
-	
-	
+
     /* ── child detail screen ── */
     function ChildDetailScreen({ child, data, onBack, onApprove, onReject }) {
       const [tab, setTab] = useState("tasks");
@@ -483,7 +484,7 @@
           {tab === "tasks" && (
             <div>
               {myTasks.length === 0 ? <EmptyState icon="📋" text="אין משימות פעילות" /> : myTasks.map((t) => {
-                const tt = TASK_TYPES[t.type] || TASK_TYPES.routine;
+                const tt = TASK_TYPES[t.type];
                 return (
                   <div key={t.id} style={{ background: "white", borderRadius: 16, padding: "14px 16px", marginBottom: 10, boxShadow: C.ssm, display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ width: 40, height: 40, borderRadius: 12, background: tt.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{t.icon}</div>
@@ -594,17 +595,14 @@
             ))}
           </div>
           {list.length === 0 ? <EmptyState icon="✅" text="אין משימות" /> : list.map((t) => {
-            const tt = TASK_TYPES[t.type] || TASK_TYPES.routine;
+            const tt = TASK_TYPES[t.type];
             return (
               <div key={t.id} style={{ background: "white", borderRadius: 18, padding: "14px 16px", marginBottom: 10, boxShadow: C.ssm, border: `1px solid ${t.active ? C.border : "#FEE2E2"}` }}>
                 <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                   <div style={{ width: 44, height: 44, borderRadius: 13, background: tt.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{t.icon}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                      <div>
-                        <p style={{ fontWeight: 700, fontSize: 16, color: t.active ? C.text : C.soft, margin: 0 }}>{t.name}</p>
-                        <p style={{ fontSize: 11, color: C.soft, margin: "2px 0 0 0" }}>מאת: {t.createdBy || "אבא"}</p>
-                      </div>
+                      <p style={{ fontWeight: 700, fontSize: 16, color: t.active ? C.text : C.soft, margin: 0 }}>{t.name}</p>
                       <div style={{ display: "flex", gap: 6 }}>
                         <button onClick={() => onEdit(t)} className="btn" style={{ padding: "4px 10px", borderRadius: 9, border: `1px solid ${C.border}`, background: "white", fontSize: 12, fontWeight: 600, color: C.mid }}>עריכה</button>
                         <button onClick={() => onToggle(t.id)} className="btn" style={{ padding: "4px 10px", borderRadius: 9, border: "none", background: t.active ? "#FEF2F2" : "#ECFDF5", fontSize: 12, fontWeight: 600, color: t.active ? C.red : C.green }}>
@@ -634,14 +632,13 @@
       );
     }
 
-/* ── task form ── */
+    /* ── task form ── */
     function TaskFormScreen({ task: init, children, onSave, onDelete, onBack }) {
       const blank = {
         name: "", desc: "", type: "routine", icon: "📝",
         rewardType: "money", rewardAmount: 0, rewardPoints: 0,
         requiresApproval: false, frequency: "daily",
-        assignedTo: children.map((c) => c.id), active: true, createdBy: "",
-        remindTime: "" // נוסף שדה שעה
+        assignedTo: children.map((c) => c.id), active: true,
       };
       const [form, setForm] = useState(init || blank);
 
@@ -669,12 +666,7 @@
               style={{ width: "100%", padding: "13px 14px", borderRadius: 12, border: `2px solid ${C.border}`, fontSize: 16, color: C.text, marginBottom: 14 }} />
             <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: C.mid, marginBottom: 6 }}>תיאור</label>
             <textarea value={form.desc} onChange={(e) => set("desc", e.target.value)} rows={2} placeholder="הוראות נוספות"
-              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: `2px solid ${C.border}`, fontSize: 14, color: C.text, resize: "none", marginBottom: 14 }} />
-              
-            {/* ⏰ תוספת שעון המעורר */}
-            <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: C.mid, marginBottom: 6 }}>⏰ שעת תזכורת (אופציונלי)</label>
-            <input type="time" value={form.remindTime || ""} onChange={(e) => set("remindTime", e.target.value)}
-              style={{ width: "100%", padding: "13px 14px", borderRadius: 12, border: `2px solid ${C.border}`, fontSize: 16, color: C.text, fontFamily: "sans-serif" }} />
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: `2px solid ${C.border}`, fontSize: 14, color: C.text, resize: "none" }} />
           </div>
 
           <div style={{ background: "white", borderRadius: 22, padding: 20, boxShadow: C.sh, marginBottom: 16 }}>
@@ -755,7 +747,7 @@
         </div>
       );
     }
-	
+
     /* ══════════════════════════════════════════════
        PARENT — APPROVALS TAB
     ══════════════════════════════════════════════ */
@@ -809,7 +801,7 @@
                   const ch = data.children.find((x) => x.id === cp.childId);
                   if (!t || !ch) return null;
                   
-                  const tt = TASK_TYPES[t.type] || TASK_TYPES.routine;
+                  const tt = TASK_TYPES[t.type];
                   return (
                     <div key={cp.id} style={{ background: "white", borderRadius: 20, padding: 16, marginBottom: 12, boxShadow: C.sh, border: `2px solid ${C.amber}33` }}>
                       <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
@@ -922,7 +914,7 @@
             return (
               <div key={ch.id} style={{ background: "white", borderRadius: 24, padding: 20, boxShadow: C.sh, marginBottom: 16, border: `2px solid ${ch.colorLight}` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-                  <ChildAvatar child={ch} size={50} radius={16} />
+                  <div style={{ width: 50, height: 50, borderRadius: 16, background: ch.colorGrad, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>{ch.avatar}</div>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontWeight: 800, fontSize: 17, color: C.text, margin: 0 }}>{ch.name}</p>
                     <p style={{ fontSize: 24, fontWeight: 900, color: ch.color, marginTop: 2, marginBottom: 0 }}>{fmt(ch.balance)}</p>
@@ -978,21 +970,21 @@
     }
 
     /* ══════════════════════════════════════════════
-       PARENT — SETTINGS / FAMILY MGMT
+       PARENT — SETTINGS
     ══════════════════════════════════════════════ */
 
     function SettingsTab({ data, onFamilyMgmt, onNotifications, onAppearance, onResetData }) {
       const rows = [
         { icon: "👨‍👩‍👧", label: "ניהול משפחה",  sub: `${data.children.length} ילדים`, action: onFamilyMgmt,   color: C.primary },
-        { icon: "🔔",    label: "התראות",        sub: "הגדרות התראות",                    action: onNotifications, color: C.amber   },
-        { icon: "🎨",    label: "עיצוב והתאמה", sub: "צבעים ותצוגה",                     action: onAppearance,    color: C.pink    },
-        { icon: "🗑️",   label: "איפוס נתונים",  sub: "מחיקת כסף ונקודות",                action: onResetData,     color: C.red     },
-        { icon: "ℹ️",   label: "אודות",         sub: "גרסה 2.0 (אקדמיה)",               action: () => alert("משפחה במשימה\nגרסה 2.0"), color: C.soft },
+        { icon: "🔔",    label: "התראות",        sub: "הגדרות התראות",                   action: onNotifications, color: C.amber   },
+        { icon: "🎨",    label: "עיצוב והתאמה", sub: "צבעים ותצוגה",                    action: onAppearance,    color: C.pink    },
+        { icon: "🗑️",   label: "איפוס נתונים",  sub: "מחיקת כסף ונקודות",               action: onResetData,     color: C.red     },
+        { icon: "ℹ️",   label: "אודות",         sub: "גרסה 1.0",                        action: () => alert("משפחה במשימה\nגרסה 1.0"), color: C.soft },
       ];
       
       return (
         <div className="sc">
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: C.text, marginBottom: 20, margin: 0 }}>הגדרות (מנהל)</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: C.text, marginBottom: 20, margin: 0 }}>הגדרות</h2>
           <div style={{ background: "white", borderRadius: 22, boxShadow: C.ssm, overflow: "hidden", marginBottom: 16, marginTop: 20 }}>
             {rows.map((r, i) => (
               <button key={r.label} onClick={r.action} className="btn" style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", width: "100%", background: "none", border: "none", borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : "none", textAlign: "right" }}>
@@ -1004,6 +996,11 @@
                 <span style={{ color: C.soft, fontSize: 18 }}>←</span>
               </button>
             ))}
+          </div>
+          <div style={{ background: "white", borderRadius: 22, padding: 20, boxShadow: C.ssm, textAlign: "center" }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>🌟</div>
+            <p style={{ fontWeight: 800, fontSize: 16, color: C.text, margin: 0 }}>משפחה במשימה</p>
+            <p style={{ color: C.soft, fontSize: 12, marginTop: 4 }}>משימות · חיסכון · תגמולים</p>
           </div>
         </div>
       );
@@ -1024,7 +1021,8 @@
                 <ChildAvatar child={ch} size={48} radius={15} />
                 <div style={{ flex: 1 }}>
                   <p style={{ fontWeight: 700, fontSize: 15, color: C.text, margin: 0 }}>{ch.name}</p>
-                  <p style={{ fontSize: 12, color: C.soft, margin: "2px 0 0 0" }}>קוד: {ch.pin} | תמונה: {ch.photo ? 'יש' : 'אין'}</p>
+                  <p style={{ fontSize: 12, color: C.soft, margin: "2px 0 0 0" }}>גיל {calcAge(ch.birthYear)} · קוד: {ch.pin}</p>
+                  <p style={{ fontSize: 12, color: C.primary, marginTop: 1, margin: "2px 0 0 0" }}>🎯 {ch.savingGoal.name} ({fmt(ch.savingGoal.targetAmount)})</p>
                 </div>
                 <button onClick={() => onEditChild(ch)} className="btn" style={{ padding: "8px 14px", borderRadius: 10, border: `1px solid ${C.border}`, background: "white", color: C.mid, fontWeight: 600, fontSize: 13 }}>עריכה</button>
               </div>
@@ -1034,59 +1032,132 @@
       );
     }
 
-    /* ── Date picker dependencies for Child Edit ── */
+    /* ── shared child avatar — shows photo or emoji ── */
+    function ChildAvatar({ child, size = 60, radius = 20 }) {
+      if (child.photo) {
+        return (
+          <div style={{ width: size, height: size, borderRadius: radius, overflow: "hidden", flexShrink: 0, boxShadow: `0 4px 12px ${child.color}40` }}>
+            <img src={child.photo} alt={child.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          </div>
+        );
+      }
+      return (
+        <div style={{ width: size, height: size, borderRadius: radius, background: child.colorGrad, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.48, flexShrink: 0, boxShadow: `0 4px 12px ${child.color}40` }}>
+          {child.avatar}
+        </div>
+      );
+    }
+
+    /* ── Drum Roll column ── */
     function DrumColumn({ items, selected, onSelect, width }) {
       const ITEM_H = 44;
       const VISIBLE = 5;
       const ref = useRef(null);
+
       const selectedIdx = items.findIndex((it) => it.value === selected);
       
-      useEffect(() => { if (ref.current) ref.current.scrollTop = selectedIdx * ITEM_H; }, []);
+      useEffect(() => {
+        if (ref.current) {
+          ref.current.scrollTop = selectedIdx * ITEM_H;
+        }
+      }, []); // scroll to initial on mount only
+
       function handleScroll() {
         if (!ref.current) return;
         const idx = Math.round(ref.current.scrollTop / ITEM_H);
         const clamped = Math.max(0, Math.min(idx, items.length - 1));
-        if (items[clamped].value !== selected) onSelect(items[clamped].value);
+        if (items[clamped].value !== selected) {
+          onSelect(items[clamped].value);
+        }
       }
+
       return (
         <div style={{ position: "relative", width, flexShrink: 0 }}>
-          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: ITEM_H * 2, background: "linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)", zIndex: 2, pointerEvents: "none" }} />
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: ITEM_H * 2, background: "linear-gradient(to top, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)", zIndex: 2, pointerEvents: "none" }} />
+          {/* top fade */}
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: ITEM_H * 2, background: "linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)", zIndex: 2, pointerEvents: "none", borderRadius: "16px 16px 0 0" }} />
+          {/* bottom fade */}
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: ITEM_H * 2, background: "linear-gradient(to top, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)", zIndex: 2, pointerEvents: "none", borderRadius: "0 0 16px 16px" }} />
+          {/* selection highlight */}
           <div style={{ position: "absolute", top: "50%", left: 6, right: 6, height: ITEM_H, transform: "translateY(-50%)", background: C.primary + "18", borderRadius: 12, zIndex: 1, pointerEvents: "none" }} />
-          <div ref={ref} onScroll={handleScroll} style={{ height: ITEM_H * VISIBLE, overflowY: "scroll", scrollSnapType: "y mandatory", scrollbarWidth: "none" }}>
+          {/* scrollable list */}
+          <div
+            ref={ref}
+            onScroll={handleScroll}
+            style={{
+              height: ITEM_H * VISIBLE,
+              overflowY: "scroll",
+              scrollSnapType: "y mandatory",
+              WebkitOverflowScrolling: "touch",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+            }}
+          >
             <style>{`div::-webkit-scrollbar{display:none}`}</style>
+            {/* padding top so first item can center */}
             <div style={{ height: ITEM_H * 2 }} />
             {items.map((it) => (
-              <div key={it.value} onClick={() => { onSelect(it.value); if (ref.current) { const idx = items.findIndex((x) => x.value === it.value); ref.current.scrollTo({ top: idx * ITEM_H, behavior: "smooth" }); } }}
-                style={{ height: ITEM_H, display: "flex", alignItems: "center", justifyContent: "center", scrollSnapAlign: "center", fontSize: it.value === selected ? 17 : 15, fontWeight: it.value === selected ? 800 : 500, color: it.value === selected ? C.primary : C.mid, cursor: "pointer", position: "relative", zIndex: 3 }}>
+              <div
+                key={it.value}
+                onClick={() => {
+                  onSelect(it.value);
+                  if (ref.current) {
+                    const idx = items.findIndex((x) => x.value === it.value);
+                    ref.current.scrollTo({ top: idx * ITEM_H, behavior: "smooth" });
+                  }
+                }}
+                style={{
+                  height: ITEM_H,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  scrollSnapAlign: "center",
+                  fontSize: it.value === selected ? 17 : 15,
+                  fontWeight: it.value === selected ? 800 : 500,
+                  color: it.value === selected ? C.primary : C.mid,
+                  cursor: "pointer",
+                  transition: "all .15s",
+                  userSelect: "none",
+                  position: "relative",
+                  zIndex: 3,
+                }}
+              >
                 {it.label}
               </div>
             ))}
+            {/* padding bottom */}
             <div style={{ height: ITEM_H * 2 }} />
           </div>
         </div>
       );
     }
 
+    /* ── iOS Drum Roll date picker ── */
     function DatePicker({ value, onChange }) {
       const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
       const currentYear = new Date().getFullYear();
       const daysInMonth = new Date(value.year, value.month, 0).getDate();
+      
       const dayItems   = Array.from({ length: daysInMonth }, (_, i) => ({ value: i + 1, label: String(i + 1).padStart(2, "0") }));
       const monthItems = MONTHS.map((m, i) => ({ value: i + 1, label: m }));
       const yearItems  = Array.from({ length: 22 }, (_, i) => ({ value: currentYear - 4 - i, label: String(currentYear - 4 - i) }));
       
+      // clamp day if month changes and days are fewer
       function handleChange(field, val) {
         const next = { ...value, [field]: val };
         const maxDay = new Date(next.year, next.month, 0).getDate();
         if (next.day > maxDay) next.day = maxDay;
         onChange(next);
       }
+
       return (
         <div style={{ background: "white", borderRadius: 20, overflow: "hidden", boxShadow: C.ssm, border: `2px solid ${C.border}` }}>
+          {/* column headers */}
           <div style={{ display: "flex", borderBottom: `1px solid ${C.border}`, padding: "10px 0 8px" }}>
-            {["יום", "חודש", "שנה"].map((l) => <div key={l} style={{ flex: 1, textAlign: "center", fontSize: 11, fontWeight: 700, color: C.soft }}>{l}</div>)}
+            {[["יום", "33%"], ["חודש", "44%"], ["שנה", "23%"]].map(([l, w]) => (
+              <div key={l} style={{ width: w, textAlign: "center", fontSize: 11, fontWeight: 700, color: C.soft, letterSpacing: 1 }}>{l}</div>
+            ))}
           </div>
+          {/* drums */}
           <div style={{ display: "flex", padding: "0 4px" }}>
             <DrumColumn items={dayItems}   selected={value.day}   onSelect={(v) => handleChange("day",   v)} width="33%" />
             <DrumColumn items={monthItems} selected={value.month} onSelect={(v) => handleChange("month", v)} width="44%" />
@@ -1096,8 +1167,8 @@
       );
     }
 
-
-function AddEditChildScreen({ child: init, onSave, onBack }) {
+    function AddEditChildScreen({ child: init, onSave, onBack }) {
+      // parse existing birthDate "DD/MM/YYYY" or default
       function parseBirth(ch) {
         if (ch?.birthDate) {
           const parts = ch.birthDate.split("/");
@@ -1107,12 +1178,11 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
       }
 
       const blank = {
-        name: "", username: "", birthYear: 2018, birthDate: "01/01/2018", pin: "", gender: "boy",
-        avatar: "🧒", photo: "", color: "#6366F1", colorLight: "#EEF2FF",
+        name: "", birthYear: 2018, birthDate: "01/01/2018", pin: "", gender: "boy",
+        avatar: "🧒", color: "#6366F1", colorLight: "#EEF2FF",
         colorGrad: "linear-gradient(135deg,#6366F1,#8B5CF6)",
         balance: 0, totalEarned: 0, totalSpent: 0, points: 0,
-        savingGoal: { name: "מטרה חדשה", targetAmount: 100 },
-        photoX: 50, photoY: 50, photoScale: 1 // נתוני ברירת מחדל לחיתוך
+        savingGoal: { name: "", targetAmount: 0 },
       };
       
       const [form, setForm] = useState(init ? { ...init } : blank);
@@ -1147,17 +1217,19 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
         <div className="sl">
           <BackBtn onBack={onBack} />
           <h2 style={{ fontSize: 22, fontWeight: 800, color: C.text, marginBottom: 20, marginTop: 10 }}>{init ? "עריכת" : "הוספת"} ילד</h2>
-          
           <div style={{ background: "white", borderRadius: 22, padding: 20, boxShadow: C.sh, marginBottom: 16 }}>
             <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: C.mid, marginBottom: 6 }}>שם הילד *</label>
-            <input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="שם הילד"
+            <input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="שם"
               style={{ width: "100%", padding: "13px 14px", borderRadius: 12, border: `2px solid ${C.border}`, fontSize: 16, marginBottom: 14 }} />
 
-            <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: C.mid, marginBottom: 6 }}>כינוי לקישור באנגלית (למשל: elia)</label>
-            <input value={form.username || ""} onChange={(e) => set("username", e.target.value.replace(/[^a-zA-Z0-9]/g, ''))} placeholder="לכניסה ישירה"
-              style={{ width: "100%", padding: "13px 14px", borderRadius: 12, border: `2px solid ${C.border}`, fontSize: 16, marginBottom: 14, direction: 'ltr' }} />
-
-            <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: C.mid, marginBottom: 10 }}>📅 תאריך לידה</label>
+            <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: C.mid, marginBottom: 10 }}>
+              📅 תאריך לידה
+              {form.birthDate && (
+                <span style={{ fontWeight: 800, color: C.primary, fontSize: 14, marginRight: 10 }}>
+                  {form.birthDate} (גיל {calcAge(birthParts.year)})
+                </span>
+              )}
+            </label>
             <DatePicker value={birthParts} onChange={handleDateChange} />
 
             <div style={{ height: 14 }} />
@@ -1165,42 +1237,32 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
             <input value={form.pin} onChange={(e) => set("pin", e.target.value.slice(0, 4))} placeholder="XXXX" maxLength={4}
               style={{ width: "100%", padding: "13px 14px", borderRadius: 12, border: `2px solid ${C.border}`, fontSize: 20, letterSpacing: 6, marginBottom: 14, textAlign: "center" }} />
             
-            <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: C.mid, marginBottom: 8 }}>📸 תמונת פרופיל (שם קובץ)</label>
-            <p style={{fontSize: 11, color: C.soft, marginTop: 0, marginBottom: 10}}>העלה תמונה (כמו elia.jpg) לתיקייה בגיטהאב.</p>
-            
-            <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 16 }}>
-              {/* כאן אתה רואה את התצוגה המקדימה מגיבה לסליידרים בזמן אמת! */}
-              <ChildAvatar child={{...form}} size={64} radius={18} />
-              <input 
-                type="text" 
-                value={form.photo || ""} 
-                onChange={(e) => set("photo", e.target.value.trim())} 
-                placeholder="לדוגמה: elia.jpg" 
-                style={{ flex: 1, padding: "12px", borderRadius: 12, border: `2px solid ${C.border}`, fontSize: 15, direction: 'ltr' }} 
-              />
-            </div>
-
-            {/* כלי החיתוך - מופיעים רק אם הוקלד שם של תמונה */}
-            {form.photo && form.photo.trim() !== "" && (
-              <div style={{ background: "#F3F4F6", padding: 15, borderRadius: 14, marginBottom: 16 }}>
-                <p style={{ fontSize: 13, fontWeight: "bold", color: C.mid, marginTop: 0, marginBottom: 12 }}>✂️ כיוון וזום לתמונה</p>
-                
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <span style={{ fontSize: 12, width: 60, fontWeight: 600 }}>🔍 זום:</span>
-                  <input type="range" min="1" max="3" step="0.1" value={form.photoScale || 1} onChange={(e) => set("photoScale", parseFloat(e.target.value))} style={{ flex: 1, direction: "ltr" }} />
-                </div>
-                
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <span style={{ fontSize: 12, width: 60, fontWeight: 600 }}>↕️ גובה:</span>
-                  <input type="range" min="0" max="100" value={form.photoY !== undefined ? form.photoY : 50} onChange={(e) => set("photoY", parseInt(e.target.value))} style={{ flex: 1, direction: "ltr" }} />
-                </div>
-                
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 12, width: 60, fontWeight: 600 }}>↔️ רוחב:</span>
-                  <input type="range" min="0" max="100" value={form.photoX !== undefined ? form.photoX : 50} onChange={(e) => set("photoX", parseInt(e.target.value))} style={{ flex: 1, direction: "ltr" }} />
-                </div>
+            <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: C.mid, marginBottom: 8 }}>📸 תמונת פרופיל</label>
+            {/* photo upload */}
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+              <div style={{ width: 72, height: 72, borderRadius: 22, overflow: "hidden", background: form.photo ? "transparent" : form.colorLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, flexShrink: 0, border: `2px solid ${C.border}` }}>
+                {form.photo
+                  ? <img src={form.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : form.avatar}
               </div>
-            )}
+              <div style={{ flex: 1 }}>
+                <label className="btn" style={{ display: "block", padding: "11px 16px", borderRadius: 12, border: `2px dashed ${C.primary}`, background: C.primary + "10", color: C.primary, fontWeight: 700, fontSize: 14, textAlign: "center", cursor: "pointer" }}>
+                  {form.photo ? "🔄 החלף תמונה" : "📁 בחר תמונה"}
+                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => set("photo", ev.target.result);
+                    reader.readAsDataURL(file);
+                  }} />
+                </label>
+                {form.photo && (
+                  <button onClick={() => set("photo", null)} className="btn" style={{ width: "100%", marginTop: 8, padding: "8px", borderRadius: 10, border: "none", background: "#FEF2F2", color: C.red, fontWeight: 700, fontSize: 12 }}>
+                    🗑️ הסר תמונה
+                  </button>
+                )}
+              </div>
+            </div>
             
             <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: C.mid, marginBottom: 8 }}>אווטר (אם אין תמונה)</label>
             <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
@@ -1216,7 +1278,6 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
               ))}
             </div>
           </div>
-          
           <div style={{ background: "white", borderRadius: 22, padding: 20, boxShadow: C.sh, marginBottom: 16 }}>
             <p style={{ fontWeight: 700, fontSize: 16, color: C.text, marginBottom: 14, marginTop: 0 }}>🎯 יעד חיסכון</p>
             <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: C.mid, marginBottom: 6 }}>שם היעד</label>
@@ -1229,200 +1290,70 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
             <input type="number" value={form.balance} onChange={(e) => set("balance", parseFloat(e.target.value) || 0)} min={0}
               style={{ width: "100%", padding: "13px 14px", borderRadius: 12, border: `2px solid ${C.border}`, fontSize: 16 }} />
           </div>
-          
           <button onClick={save} className="btn" style={{ width: "100%", padding: 16, borderRadius: 16, border: "none", background: C.primary, color: "white", fontWeight: 800, fontSize: 17, marginBottom: 32 }}>
             {init ? "שמור שינויים" : "הוסף ילד"}
           </button>
         </div>
       );
     }
-	
-	
-/* ─── Academy 🎓 ─── */
-    function Academy({ child, data, onEarn, onBack }) {
-      const [game, setGame] = useState(null); 
-      const [q, setQ] = useState(null);
-      const [ans, setAns] = useState("");
-      const [hint, setHint] = useState(null); // הוספנו מצב לשמירת הרמז
+
+    function NotificationsScreen({ onBack }) {
+      const [s, setS] = useState({ tasks: true, approvals: true, savings: false, daily: true });
       
-      const todayStr = new Date().toDateString();
-      const progressKey = `academy_${child.id}_${todayStr}`;
-      const [streak, setStreak] = useState(() => parseInt(localStorage.getItem(progressKey)) || 0);
-
-      const alreadyEarnedToday = data.transactions.some(t => 
-        t.childId === child.id && 
-        t.desc === 'משימת אקדמיה יומית' && 
-        new Date(t.date).toDateString() === todayStr
-      );
-
-      const TOTAL_QUESTIONS = 20;
-      const REWARD_AMOUNT = 5;
-
-      useEffect(() => {
-        localStorage.setItem(progressKey, streak.toString());
-      }, [streak, progressKey]);
-
-      const startMath = () => {
-        const isLian = child.name === "ליאן";
-        const n1 = Math.floor(Math.random() * (isLian ? 50 : 20)) + 1;
-        const n2 = Math.floor(Math.random() * (isLian ? 20 : 10)) + 1;
-        const op = (isLian && Math.random() > 0.7) ? 'x' : '+';
-        setQ({ txt: `${n1} ${op === 'x' ? '×' : '+'} ${n2}`, a: op === '+' ? n1 + n2 : n1 * n2, type: 'num' });
-        setHint(null);
-        setGame('math');
-      };
-
-      const startEng = () => {
-        const item = ENGLISH_BANK[Math.floor(Math.random() * ENGLISH_BANK.length)];
-        setQ({ txt: `איך אומרים "${item.h}" באנגלית?`, a: item.e, type: 'txt' });
-        setHint(null);
-        setGame('eng');
-      };
-
-      const check = () => {
-        if (ans.toUpperCase().trim() == q.a.toString()) {
-          const newStreak = streak + 1;
-          setStreak(newStreak);
-          setAns("");
-          setHint(null);
-          
-          if (newStreak === TOTAL_QUESTIONS && !alreadyEarnedToday) {
-            onEarn(REWARD_AMOUNT, 'משימת אקדמיה יומית');
-            alert(`🎉 אלופים! עניתם על ${TOTAL_QUESTIONS} שאלות והרווחתם ${fmt(REWARD_AMOUNT)} לקופה!`);
-            setGame(null);
-          } else if (newStreak >= TOTAL_QUESTIONS) {
-             alert("מצוין! נמשיך מחר (את הפרס של היום כבר קיבלת 😉)");
-             setGame(null);
-          } else {
-            game === 'math' ? startMath() : startEng();
-          }
-        } else { 
-          // ייצור שיטת למידה או רמז במקרה של טעות
-          if (game === 'math') {
-            if (q.txt.includes('+')) {
-              const parts = q.txt.split('+').map(p => parseInt(p.trim()));
-              const big = Math.max(parts[0], parts[1]);
-              const small = Math.min(parts[0], parts[1]);
-              setHint(`💡 שיטה לחיבור: שימו בראש את המספר הגדול (${big}) ותוסיפו לו באצבעות עוד ${small}.`);
-            } else if (q.txt.includes('×')) {
-              const parts = q.txt.split('×').map(p => parseInt(p.trim()));
-              setHint(`💡 שיטה לכפל: כפל זה חיבור חוזר! זה לחבר את המספר ${parts[1]} לעצמו ${parts[0]} פעמים.`);
-            }
-          } else if (game === 'eng') {
-             setHint(`💡 רמז: המילה מתחילה באות ${q.a.charAt(0)}`);
-          }
-          setAns(""); // מנקה את התשובה השגויה כדי שינסו שוב
-        }
-      };
-
-      if (alreadyEarnedToday && !game) {
-        return (
-          <div className="sl" style={{padding: 20}}>
-            <BackBtn onBack={onBack} />
-            <div style={{textAlign: 'center', background: 'white', borderRadius: 20, padding: 30, boxShadow: C.sh}}>
-              <div style={{fontSize: 50}}>🏆</div>
-              <h2 style={{ color: C.primary, margin: "10px 0" }}>משימה הושלמה!</h2>
-              <p style={{ color: C.soft, fontSize: 15 }}>סיימתם את משימת האקדמיה להיום והרווחתם {fmt(REWARD_AMOUNT)}.<br/>תחזרו מחר לאתגר חדש!</p>
-              <button onClick={() => setStreak(0)} className="btn" style={{ background: '#EEF2FF', padding: "10px 20px", borderRadius: 12, border: 'none', color: C.primary, fontWeight: 700, marginTop: 15 }}>תרגול נוסף לכיף (ללא פרס)</button>
-            </div>
-          </div>
-        );
-      }
-
-      if (!game) return (
-        <div className="sl" style={{padding: 20}}>
-          <BackBtn onBack={onBack} />
-          <div style={{textAlign: 'center', background: 'white', borderRadius: 20, padding: 30, boxShadow: C.sh}}>
-            <h2 style={{ color: C.primary, margin: "0 0 10px 0" }}>🎓 אקדמיה לילדים</h2>
-            <p style={{ color: C.soft, fontSize: 14, margin: "0 0 15px 0" }}>
-              ענו על <b>{TOTAL_QUESTIONS} שאלות</b> נכון כדי להרוויח <b>{fmt(REWARD_AMOUNT)}</b>!
-            </p>
-            <div style={{ background: '#FFFBEB', padding: 12, borderRadius: 12, marginBottom: 20, border: `2px solid ${C.amber}55` }}>
-              <b style={{color: C.amber, fontSize: 15}}>התקדמות היום: {streak} מתוך {TOTAL_QUESTIONS}</b>
-              <div style={{marginTop: 8}}><ProgressBar pct={(streak / TOTAL_QUESTIONS) * 100} color={C.amber} h={10} /></div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
-              <button onClick={startMath} className="btn" style={{ background: '#EEF2FF', padding: 20, borderRadius: 15, border: 'none', color: C.primary, fontWeight: 800, fontSize: 16 }}>🔢<br/><br/>חשבון</button>
-              <button onClick={startEng} className="btn" style={{ background: '#FDF2F8', padding: 20, borderRadius: 15, border: 'none', color: C.pink, fontWeight: 800, fontSize: 16 }}>🔤<br/><br/>אנגלית</button>
-            </div>
-          </div>
-        </div>
-      );
+      const rows = [
+        ["tasks",    "🔔 משימות חדשות",   "קבל התראה על משימות חדשות"],
+        ["approvals","✅ בקשות אישור",     "ילד ביצע משימה"],
+        ["savings",  "💰 עדכוני חיסכון",  "הגעת ליעד"],
+        ["daily",    "📊 סיכום יומי",      "בכל ערב"],
+      ];
       
       return (
-        <div className="sl" style={{ textAlign: 'center', padding: 20 }}>
-          <BackBtn onBack={() => { setGame(null); setHint(null); }} label="ביטול" />
-          <div style={{padding: '30px 20px', background: 'white', borderRadius: 24, boxShadow: C.sh}}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 15, color: C.soft, fontWeight: "bold", fontSize: 14 }}>
-              <span>שאלה {streak + 1} מתוך {TOTAL_QUESTIONS}</span>
-              <span>💰 פרס: {fmt(REWARD_AMOUNT)}</span>
-            </div>
-            <ProgressBar pct={(streak / TOTAL_QUESTIONS) * 100} color={C.green} h={8} />
-            <div className="academy-q" style={{marginTop: 30}}>{q.txt}</div>
-            
-            {/* הצגת הרמז אם הילד טעה */}
-            {hint && (
-              <div style={{background: '#FEF2F2', border: `2px solid ${C.red}55`, borderRadius: 12, padding: 12, marginBottom: 20, color: C.red, fontSize: 14, fontWeight: 700}}>
-                {hint}
+        <div className="sl">
+          <BackBtn onBack={onBack} label="חזרה להגדרות" />
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: C.text, marginBottom: 20, marginTop: 10 }}>🔔 התראות</h2>
+          <div style={{ background: "white", borderRadius: 22, boxShadow: C.ssm, overflow: "hidden" }}>
+            {rows.map(([k, l, sub], i) => (
+              <div key={k} style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 700, fontSize: 15, color: C.text, margin: 0 }}>{l}</p>
+                  <p style={{ fontSize: 12, color: C.soft, marginTop: 2, margin: "2px 0 0 0" }}>{sub}</p>
+                </div>
+                <button onClick={() => setS((x) => ({ ...x, [k]: !x[k] }))} className="btn" style={{ width: 50, height: 28, borderRadius: 14, border: "none", background: s[k] ? C.primary : "#DDD", position: "relative", transition: "background .2s", flexShrink: 0 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: 11, background: "white", position: "absolute", top: 3, right: s[k] ? 4 : 24, transition: "right .2s", boxShadow: "0 1px 4px rgba(0,0,0,.2)" }} />
+                </button>
               </div>
-            )}
-
-            <input type={q.type === 'num' ? 'number' : 'text'} value={ans} onChange={e => setAns(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} style={{ width: '100%', fontSize: 32, textAlign: 'center', padding: 15, borderRadius: 15, border: `3px solid ${C.border}`, marginBottom: 20 }} placeholder="תשובה..." autoFocus />
-            <button onClick={check} className="btn" style={{ width: '100%', background: C.green, color: 'white', padding: 18, borderRadius: 15, fontWeight: 900, fontSize: 18 }}>בדוק תשובה ✅</button>
+            ))}
           </div>
         </div>
       );
     }
-	
-	
-/* ══════════════════════════════════════════════
+
+    function AppearanceScreen({ onBack }) {
+      const [theme, setTheme] = useState("light");
+      
+      return (
+        <div className="sl">
+          <BackBtn onBack={onBack} label="חזרה להגדרות" />
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: C.text, marginBottom: 20, marginTop: 10 }}>🎨 עיצוב</h2>
+          <div style={{ background: "white", borderRadius: 22, padding: 20, boxShadow: C.ssm }}>
+            {[["light","☀️ בהיר","בהיר וצבעוני"],["dark","🌙 כהה","כהה (בקרוב)"]].map(([v, l, sub]) => (
+              <button key={v} onClick={() => setTheme(v)} className="btn" style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "14px", borderRadius: 14, border: `2px solid ${theme === v ? C.primary : C.border}`, background: theme === v ? C.primary + "12" : "white", marginBottom: 10, textAlign: "right" }}>
+                <span style={{ fontSize: 24 }}>{l.split(" ")[0]}</span>
+                <div><p style={{ fontWeight: 700, fontSize: 14, color: C.text, margin: 0 }}>{l}</p><p style={{ fontSize: 12, color: C.soft, margin: "2px 0 0 0" }}>{sub}</p></div>
+                {theme === v && <span style={{ marginRight: "auto", color: C.primary, fontWeight: 800 }}>✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    /* ══════════════════════════════════════════════
        CHILD DASHBOARD
     ══════════════════════════════════════════════ */
 
-    function ChildDashboard({ child, data, onComplete, onEarn }) {
+    function ChildDashboard({ child, data, onComplete }) {
       const [section, setSection] = useState("tasks");
-      const [currentTime, setCurrentTime] = useState("");
-      const playedFor = useRef(new Set());
-      
-      // שעון ובדיקת התראות
-      useEffect(() => {
-        const interval = setInterval(() => {
-          const d = new Date();
-          const hhmm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-          setCurrentTime(hhmm);
-
-          const activeTasks = data.tasks.filter(t => t.assignedTo.includes(child.id) && t.active);
-          let shouldRing = false;
-
-          activeTasks.forEach(t => {
-             if (t.remindTime && t.remindTime === hhmm) {
-                // בודקים אם המשימה לא בוצעה או ממתינה היום
-                const isDone = data.completions.some(c => c.taskId === t.id && c.childId === child.id && 
-                  (c.status === 'pending' || (c.status === 'approved' && Date.now() - new Date(c.completedAt).getTime() < 86400000)));
-                
-                // משמיע צליל פעם אחת בלבד לאותה דקה
-                if (!isDone && !playedFor.current.has(t.id + hhmm)) {
-                   shouldRing = true;
-                   playedFor.current.add(t.id + hhmm);
-                }
-             }
-          });
-
-          if (shouldRing) {
-             const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-             audio.play().catch(e => console.log('Audio blocked by browser', e));
-          }
-        }, 5000); // בודק כל 5 שניות
-        return () => clearInterval(interval);
-      }, [data.tasks, data.completions, child.id]);
-      
-      if (section === "academy") {
-        return <Academy child={child} data={data} onEarn={onEarn} onBack={() => setSection("tasks")} />;
-      }
-
-
-	  
-	  
       
       const todayTasks  = data.tasks.filter((t) => t.assignedTo.includes(child.id) && t.active && ["daily","weekdays"].includes(t.frequency));
       const demandTasks = data.tasks.filter((t) => t.assignedTo.includes(child.id) && t.active && t.frequency === "ondemand");
@@ -1466,12 +1397,6 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
           </div>
 
           <div style={{ padding: "16px 16px 90px" }}>
-            
-            {/* ACADEMY BUTTON */}
-            <button onClick={() => setSection("academy")} className="btn card" style={{ width: '100%', background: C.primary, color: 'white', fontWeight: 900, fontSize: 19, padding: 22, border: 'none', borderRadius: 20, marginBottom: 25, boxShadow: `0 8px 20px ${C.primary}44` }}>
-              🎓 האקדמיה: בואו להרוויח כסף!
-            </button>
-
             {/* saving goal */}
             <div style={{ background: "white", borderRadius: 20, padding: "14px 16px", boxShadow: C.sh, border: `2px solid ${child.colorLight}`, marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -1518,26 +1443,14 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
                 {todayTasks.length === 0 ? <EmptyState icon="🎉" text="אין משימות לעכשיו!" /> : todayTasks.map((t) => {
                   const isPending = pendingIds.has(t.id);
                   const isDone    = completedToday.has(t.id);
-                  const isRinging = t.remindTime && t.remindTime === currentTime && !isDone && !isPending;
-                  const tt = TASK_TYPES[t.type] || TASK_TYPES.routine;
-                  
+                  const tt = TASK_TYPES[t.type];
                   return (
-                    <div key={t.id} style={{ 
-                      background: isRinging ? "#FEF2F2" : "white", 
-                      borderRadius: 18, padding: "14px 16px", marginBottom: 10, 
-                      boxShadow: isRinging ? `0 0 15px ${C.red}88` : C.ssm, 
-                      border: `2px solid ${isRinging ? C.red : isDone ? C.green + "44" : isPending ? C.amber + "44" : C.border}`, 
-                      opacity: isDone ? 0.75 : 1, transition: "all 0.3s ease" 
-                    }}>
+                    <div key={t.id} style={{ background: "white", borderRadius: 18, padding: "14px 16px", marginBottom: 10, boxShadow: C.ssm, border: `2px solid ${isDone ? C.green + "44" : isPending ? C.amber + "44" : C.border}`, opacity: isDone ? 0.75 : 1 }}>
                       <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: isPending || isDone ? 0 : 12 }}>
                         <div style={{ width: 46, height: 46, borderRadius: 14, background: tt.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{t.icon}</div>
                         <div style={{ flex: 1 }}>
-                          <p style={{ fontWeight: 700, fontSize: 15, color: isRinging ? C.red : (isDone ? C.soft : C.text), margin: 0 }}>
-                            {t.name} {isRinging && "🚨 עכשיו!"}
-                          </p>
-                          <p style={{ fontSize: 11, color: C.soft, margin: "2px 0 0 0" }}>מאת: {t.createdBy || "אבא"}</p>
+                          <p style={{ fontWeight: 700, fontSize: 15, color: isDone ? C.soft : C.text, margin: 0 }}>{t.name}</p>
                           <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
-                            {t.remindTime && <Badge color={isRinging ? C.red : C.primary}>⏰ {t.remindTime}</Badge>}
                             {(t.rewardType === "money" || t.rewardType === "both") && <Badge color={C.green}>💰 +{fmt(t.rewardAmount)}</Badge>}
                             {(t.rewardType === "points" || t.rewardType === "both") && <Badge color={C.amber}>⭐ +{t.rewardPoints}</Badge>}
                           </div>
@@ -1546,7 +1459,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
                         {isPending && <Badge color={C.amber}>ממתין</Badge>}
                       </div>
                       {!isDone && !isPending && (
-                        <button onClick={() => onComplete(t.id, child.id)} className="btn" style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: isRinging ? C.red : child.colorGrad, color: "white", fontWeight: 800, fontSize: 15 }}>
+                        <button onClick={() => onComplete(t.id, child.id)} className="btn" style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: child.colorGrad, color: "white", fontWeight: 800, fontSize: 15 }}>
                           ✅ ביצעתי!
                         </button>
                       )}
@@ -1559,25 +1472,14 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
                     <p style={{ fontWeight: 700, fontSize: 15, color: C.mid, marginBottom: 10, marginTop: 16 }}>משימות זמינות</p>
                     {demandTasks.map((t) => {
                       const isPending = pendingIds.has(t.id);
-                      const isRinging = t.remindTime && t.remindTime === currentTime && !isPending;
-                      const tt = TASK_TYPES[t.type] || TASK_TYPES.routine;
+                      const tt = TASK_TYPES[t.type];
                       return (
-                        <div key={t.id} style={{ 
-                          background: isRinging ? "#FEF2F2" : "white", 
-                          borderRadius: 18, padding: "14px 16px", marginBottom: 10, 
-                          boxShadow: isRinging ? `0 0 15px ${C.red}88` : C.ssm, 
-                          border: `2px solid ${isRinging ? C.red : isPending ? C.amber + "44" : C.border}`, 
-                          transition: "all 0.3s ease" 
-                        }}>
+                        <div key={t.id} style={{ background: "white", borderRadius: 18, padding: "14px 16px", marginBottom: 10, boxShadow: C.ssm, border: `2px solid ${isPending ? C.amber + "44" : C.border}` }}>
                           <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: isPending ? 0 : 12 }}>
                             <div style={{ width: 46, height: 46, borderRadius: 14, background: tt.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{t.icon}</div>
                             <div style={{ flex: 1 }}>
-                              <p style={{ fontWeight: 700, fontSize: 15, color: isRinging ? C.red : C.text, margin: 0 }}>
-                                {t.name} {isRinging && "🚨 עכשיו!"}
-                              </p>
-                              <p style={{ fontSize: 11, color: C.soft, margin: "2px 0 0 0" }}>מאת: {t.createdBy || "אבא"}</p>
+                              <p style={{ fontWeight: 700, fontSize: 15, color: C.text, margin: 0 }}>{t.name}</p>
                               <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
-                                {t.remindTime && <Badge color={isRinging ? C.red : C.primary}>⏰ {t.remindTime}</Badge>}
                                 {(t.rewardType === "money" || t.rewardType === "both") && <Badge color={C.green}>💰 +{fmt(t.rewardAmount)}</Badge>}
                                 {(t.rewardType === "points" || t.rewardType === "both") && <Badge color={C.amber}>⭐ +{t.rewardPoints}</Badge>}
                               </div>
@@ -1585,7 +1487,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
                             {isPending && <Badge color={C.amber}>ממתין</Badge>}
                           </div>
                           {!isPending && (
-                            <button onClick={() => onComplete(t.id, child.id)} className="btn" style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: isRinging ? C.red : child.colorGrad, color: "white", fontWeight: 800, fontSize: 15 }}>
+                            <button onClick={() => onComplete(t.id, child.id)} className="btn" style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: child.colorGrad, color: "white", fontWeight: 800, fontSize: 15 }}>
                               ✅ ביצעתי!
                             </button>
                           )}
@@ -1630,16 +1532,15 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
         </div>
       );
     }
-	
+
     /* ══════════════════════════════════════════════
        PARENT SHELL
     ══════════════════════════════════════════════ */
 
-    function ParentShell({ data, setData, onLogout, showToast, loggedParent }) {
+    function ParentShell({ data, setData, onLogout, showToast }) {
       const [tab, setTab] = useState("children");
-      const [sub, setSub] = useState(null); 
+      const [sub, setSub] = useState(null);  // null | "cd"|"tf"|"fm"|"aec"|"notifs"|"appear"
       const [subParam, setSubParam] = useState(null);
-      const isAdmin = loggedParent?.role === "admin";
       
       function go(screen, param = null) { setSub(screen); setSubParam(param); }
       function back() { setSub(null); setSubParam(null); }
@@ -1673,9 +1574,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
       }
 
       function saveTask(t) {
-        // הוספת "מאת מי" אם זה חדש
-        const taskWithAuthor = { ...t, createdBy: t.createdBy || loggedParent.name };
-        setData((prev) => ({ ...prev, tasks: prev.tasks.find((x) => x.id === t.id) ? prev.tasks.map((x) => x.id === t.id ? taskWithAuthor : x) : [...prev.tasks, taskWithAuthor] }));
+        setData((prev) => ({ ...prev, tasks: prev.tasks.find((x) => x.id === t.id) ? prev.tasks.map((x) => x.id === t.id ? t : x) : [...prev.tasks, t] }));
         showToast(subParam ? "✅ משימה עודכנה" : "✅ משימה נוצרה");
         back();
       }
@@ -1714,6 +1613,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
         showToast("💸 הוצאה נרשמה", "warn");
       }
 
+      // הפונקציה החדשה לאיפוס הנתונים ל-0
       function resetAllData() {
         if (window.confirm("האם אתה בטוח שברצונך לאפס לילדים את כל הכסף, הנקודות וההיסטוריה? (המשימות יישארו)")) {
           setData((prev) => ({
@@ -1737,11 +1637,11 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
       }
 
       function renderTab() {
-        if (tab === "children")  return <ChildrenTab data={data} setData={setData} isAdmin={isAdmin} onChildClick={(id) => go("cd", id)} onAddChild={() => go("aec", { editing: null })} />;
+        if (tab === "children")  return <ChildrenTab data={data} onChildClick={(id) => go("cd", id)} onAddChild={() => go("aec", { editing: null })} />;
         if (tab === "tasks")     return <TasksTab data={data} onAdd={() => go("tf", null)} onEdit={(t) => go("tf", t)} onToggle={toggleTask} />;
         if (tab === "approvals") return <ApprovalsTab data={data} onApprove={approveCp} onReject={rejectCp} />;
         if (tab === "savings")   return <SavingsTab data={data} onBonus={addBonus} onExpense={addExpense} />;
-        if (tab === "settings" && isAdmin) return <SettingsTab data={data} onFamilyMgmt={() => go("fm")} onNotifications={() => go("notifs")} onAppearance={() => go("appear")} onResetData={resetAllData} />;
+        if (tab === "settings")  return <SettingsTab data={data} onFamilyMgmt={() => go("fm")} onNotifications={() => go("notifs")} onAppearance={() => go("appear")} onResetData={resetAllData} />;
         return null;
       }
 
@@ -1750,14 +1650,14 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
           <div style={{ background: "white", borderBottom: `1px solid ${C.border}`, padding: "20px 20px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: C.ssm }}>
             {sub
               ? <button onClick={back} className="btn" style={{ background: "none", border: "none", color: C.primary, fontWeight: 700, fontSize: 24, padding: 0, lineHeight: 1 }}>→</button>
-              : <div style={{ fontWeight: 900, fontSize: 18, color: C.primary }}>שלום {loggedParent.name} 👋</div>
+              : <div style={{ fontWeight: 900, fontSize: 18, color: C.primary }}>🌟 משפחה במשימה</div>
             }
             <button onClick={onLogout} className="btn" style={{ background: "#F3F4F6", border: "none", borderRadius: 10, padding: "7px 13px", color: C.mid, fontWeight: 700, fontSize: 13 }}>יציאה</button>
           </div>
           <div style={{ padding: "16px 16px 0" }}>
             {sub ? renderSub() : renderTab()}
           </div>
-          {!sub && <BottomNav active={tab} onChange={(id) => { setTab(id); setSub(null); }} pendingBadge={pendingCount} isAdmin={isAdmin} />}
+          {!sub && <BottomNav active={tab} onChange={(id) => { setTab(id); setSub(null); }} pendingBadge={pendingCount} />}
         </div>
       );
     }
@@ -1808,6 +1708,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
       try { localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch(e) {}
     }
 
+    /* loading screen */
     function LoadingScreen() {
       return (
         <div style={{ minHeight: "100vh", background: "linear-gradient(150deg,#6C63FF,#C084FC)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", direction: "rtl" }}>
@@ -1822,19 +1723,20 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
       const [screen, setScreen]           = useState("splash");
       const [pinTarget, setPinTarget]     = useState(null);
       const [loggedChild, setLoggedChild] = useState(null);
-      const [loggedParent, setLoggedParent] = useState(null);
       const [data, setDataRaw]            = useState(null); // null = טוען
       const [toast, setToast]             = useState(null);
-      const lastSavedRef                  = useRef(""); 
+      const lastSavedRef                  = useRef(""); // למניעת save כפול
       const pollRef                       = useRef(null);
       
-      /* טעינה ראשונה + polling */
+      /* טעינה ראשונה + polling כל 15 שניות */
       useEffect(() => {
         async function init() {
+          // טען מיד מ-localStorage
           const local = lsLoad() || INIT_DATA;
           setDataRaw(local);
           lastSavedRef.current = JSON.stringify(local);
           
+          // אחר כך נסה Firebase ברקע
           const remote = await fbLoad();
           if (remote) {
             const remoteStr = JSON.stringify(remote);
@@ -1849,6 +1751,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
         }
         init();
 
+        // polling לסנכרון בין מכשירים
         pollRef.current = setInterval(async () => {
           const remote = await fbLoad();
           if (!remote) return;
@@ -1863,7 +1766,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
         return () => clearInterval(pollRef.current);
       }, []);
 
-      // ==== כניסה אוטומטית (Magic Links) ====
+      // ==== כניסה אוטומטית לפי שם משתמש חכמה ====
       useEffect(() => {
         if (data && screen === "splash") {
           const params = new URLSearchParams(window.location.search);
@@ -1872,23 +1775,14 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
           if (userParam) {
             const paramLower = userParam.toLowerCase();
             
-            // תפקידי הורים
-            if (paramLower === "elad") {
-              setLoggedParent({ name: "אלעד", role: "admin" });
-              setScreen("parent");
-              return;
-            }
-            if (paramLower === "zivit") {
-              setLoggedParent({ name: "זיוית", role: "parent" });
-              setScreen("parent");
-              return;
-            }
-            
-            // ילדים
+            // חיפוש חכם שלא מסתמך רק על מה שנשמר בענן מקודם
             const foundChild = data.children.find(c => {
+              // קודם כל בודקים התאמה קשיחה (למקרה שבענן אין עדיין username)
               if (paramLower === "elia" && c.name === "אליה") return true;
               if (paramLower === "lian" && c.name === "ליאן") return true;
+              // אחר כך בודקים מול השדה username אם קיים
               if (c.username && c.username.toLowerCase() === paramLower) return true;
+              // ולבסוף מול השם בעברית
               if (c.name === userParam) return true;
               return false;
             });
@@ -1906,7 +1800,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
           const next = typeof updater === "function" ? updater(prev) : updater;
           const nextStr = JSON.stringify(next);
           lastSavedRef.current = nextStr;
-          lsSave(next);       // שמור מקומית
+          lsSave(next);       // שמור מיד locally
           fbSave(next);       // שמור בענן
           return next;
         });
@@ -1941,14 +1835,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
         }
       }
 
-      function onEarnAcademy(amt, desc) {
-        setData((prev) => {
-          const ch = prev.children.map((c) => c.id === loggedChild ? { ...c, balance: c.balance + amt, totalEarned: c.totalEarned + amt } : c);
-          const tr = [...prev.transactions, { id: uid(), childId: loggedChild, type: "earning", amount: amt, desc, date: new Date().toISOString() }];
-          return { ...prev, children: ch, transactions: tr };
-        });
-      }
-
+      /* מסך טעינה בזמן שמביאים נתונים */
       if (!data) return <div style={{ fontFamily: "'Rubik',sans-serif" }}><LoadingScreen /></div>;
       
       return (
@@ -1959,7 +1846,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
             <SplashScreen onParent={() => setScreen("parentLogin")} onChild={() => setScreen("childSelect")} />
           )}
           {screen === "parentLogin" && (
-            <ParentLoginScreen onSuccess={(user) => { setLoggedParent(user); setScreen("parent"); }} onBack={() => setScreen("splash")} />
+            <ParentLoginScreen onSuccess={() => setScreen("parent")} onBack={() => setScreen("splash")} />
           )}
           {screen === "childSelect" && (
             <ChildSelectScreen children={data.children} onSelect={(ch) => { setPinTarget(ch); setScreen("childPin"); }} onBack={() => setScreen("splash")} />
@@ -1967,16 +1854,17 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
           {screen === "childPin" && pinTarget && (
             <ChildPinScreen child={data.children.find((c) => c.id === pinTarget.id) || pinTarget} onSuccess={() => { setLoggedChild(pinTarget.id); setScreen("child"); }} onBack={() => setScreen("childSelect")} />
           )}
-          {screen === "parent" && loggedParent && (
-            <ParentShell data={data} setData={setData} loggedParent={loggedParent} onLogout={() => { setLoggedParent(null); setScreen("splash"); }} showToast={showToast} />
+          {screen === "parent" && (
+            <ParentShell data={data} setData={setData} onLogout={() => setScreen("splash")} showToast={showToast} />
           )}
           {screen === "child" && loggedChild && (
-            <ChildDashboard child={data.children.find((c) => c.id === loggedChild)} data={data} onComplete={completeTask} onEarn={onEarnAcademy} />
+            <ChildDashboard child={data.children.find((c) => c.id === loggedChild)} data={data} onComplete={completeTask} />
           )}
         </div>
       );
     }
 
+    // הפעלת האפליקציה!
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
