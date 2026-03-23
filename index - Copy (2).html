@@ -590,7 +590,8 @@
     /* ══════════════════════════════════════════════
        PARENT — TASKS TAB
     ══════════════════════════════════════════════ */
-	function TasksTab({ data, onAdd, onEdit, onToggle, onDuplicate }) {
+
+    function TasksTab({ data, onAdd, onEdit, onToggle }) {
       const [filter, setFilter] = useState("all");
       const list = data.tasks.filter((t) => filter === "all" || t.type === filter);
       
@@ -620,10 +621,8 @@
                         <p style={{ fontSize: 11, color: C.soft, margin: "2px 0 0 0" }}>מאת: {t.createdBy || "אבא"}</p>
                       </div>
                       <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => onEdit(t)} className="btn" style={{ padding: "4px 8px", borderRadius: 9, border: `1px solid ${C.border}`, background: "white", fontSize: 12, fontWeight: 600, color: C.mid }}>עריכה</button>
-                        {/* כפתור שמשכפל משימה מיד */}
-                        <button onClick={() => onDuplicate(t)} className="btn" style={{ padding: "4px 8px", borderRadius: 9, border: `1px solid ${C.border}`, background: "white", fontSize: 12, fontWeight: 600, color: C.primary }}>שכפל</button>
-                        <button onClick={() => onToggle(t.id)} className="btn" style={{ padding: "4px 8px", borderRadius: 9, border: "none", background: t.active ? "#FEF2F2" : "#ECFDF5", fontSize: 12, fontWeight: 600, color: t.active ? C.red : C.green }}>
+                        <button onClick={() => onEdit(t)} className="btn" style={{ padding: "4px 10px", borderRadius: 9, border: `1px solid ${C.border}`, background: "white", fontSize: 12, fontWeight: 600, color: C.mid }}>עריכה</button>
+                        <button onClick={() => onToggle(t.id)} className="btn" style={{ padding: "4px 10px", borderRadius: 9, border: "none", background: t.active ? "#FEF2F2" : "#ECFDF5", fontSize: 12, fontWeight: 600, color: t.active ? C.red : C.green }}>
                           {t.active ? "כבה" : "הפעל"}
                         </button>
                       </div>
@@ -637,6 +636,9 @@
                       {(t.rewardType === "money" || t.rewardType === "both") && <span style={{ fontWeight: 800, fontSize: 14, color: C.green }}>💰 {fmt(t.rewardAmount)}</span>}
                       {(t.rewardType === "points" || t.rewardType === "both") && <span style={{ fontWeight: 700, fontSize: 13, color: C.amber }}>⭐ {t.rewardPoints} נק'</span>}
                       {t.rewardType === "none" && <span style={{ fontSize: 13, color: C.soft }}>🤝 ללא תגמול</span>}
+                      <span style={{ fontSize: 11, color: C.soft, marginRight: "auto" }}>
+                        {data.children.filter((c) => t.assignedTo.includes(c.id)).map((c) => c.name).join(", ")}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1022,8 +1024,7 @@
       );
     }
 
-
-	function FamilyMgmtScreen({ data, onBack, onAddChild, onEditChild, onPingChild }) {
+    function FamilyMgmtScreen({ data, onBack, onAddChild, onEditChild }) {
       return (
         <div className="sl">
           <BackBtn onBack={onBack} label="חזרה להגדרות" />
@@ -1038,11 +1039,7 @@
                 <ChildAvatar child={ch} size={48} radius={15} />
                 <div style={{ flex: 1 }}>
                   <p style={{ fontWeight: 700, fontSize: 15, color: C.text, margin: 0 }}>{ch.name}</p>
-                  <p style={{ fontSize: 12, color: C.soft, margin: "2px 0 0 0" }}>קוד: {ch.pin}</p>
-                  {/* כפתור שליחת התראת בדיקה */}
-                  <button onClick={() => onPingChild(ch.id)} className="btn" style={{ marginTop: 5, padding: '4px 10px', borderRadius: 8, background: '#EEF2FF', border: 'none', color: C.primary, fontSize: 11, fontWeight: 800 }}>
-                    🔔 שלח התראת בדיקה
-                  </button>
+                  <p style={{ fontSize: 12, color: C.soft, margin: "2px 0 0 0" }}>קוד: {ch.pin} | תמונה: {ch.photo ? 'יש' : 'אין'}</p>
                 </div>
                 <button onClick={() => onEditChild(ch)} className="btn" style={{ padding: "8px 14px", borderRadius: 10, border: `1px solid ${C.border}`, background: "white", color: C.mid, fontWeight: 600, fontSize: 13 }}>עריכה</button>
               </div>
@@ -1454,36 +1451,13 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
        CHILD DASHBOARD
     ══════════════════════════════════════════════ */
 
-	function ChildDashboard({ child, data, onComplete, onEarn }) {
+    function ChildDashboard({ child, data, onComplete, onEarn }) {
       const [section, setSection] = useState("tasks");
       const [currentTime, setCurrentTime] = useState("");
       const playedFor = useRef(new Set());
-      const lastPing = useRef(0);
       
-      // שעון ובדיקת התראות משודרג (כולל פינג בדיקה מאבא)
+      // שעון ובדיקת התראות
       useEffect(() => {
-        if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
-          Notification.requestPermission();
-        }
-
-        // האזנה לפינג של בדיקה
-        if (data.ping && data.ping.childId === child.id) {
-          if (data.ping.timestamp > lastPing.current) {
-            lastPing.current = data.ping.timestamp;
-            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-            audio.play().catch(e => console.log('Audio blocked', e));
-            
-            if ("Notification" in window && Notification.permission === "granted") {
-               new Notification("בדיקת מערכת! 🔔", { 
-                 body: `היי ${child.name}, ההתראות עובדות מעולה!`, 
-                 icon: "https://emojicdn.elk.sh/🌟" 
-               });
-               if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
-            }
-          }
-        }
-
-        // האזנה לשעון משימות
         const interval = setInterval(() => {
           const d = new Date();
           const hhmm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -1491,16 +1465,16 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
 
           const activeTasks = data.tasks.filter(t => t.assignedTo.includes(child.id) && t.active);
           let shouldRing = false;
-          let taskNameForNotification = "";
 
           activeTasks.forEach(t => {
              if (t.remindTime && t.remindTime === hhmm) {
+                // בודקים אם המשימה לא בוצעה או ממתינה היום
                 const isDone = data.completions.some(c => c.taskId === t.id && c.childId === child.id && 
                   (c.status === 'pending' || (c.status === 'approved' && Date.now() - new Date(c.completedAt).getTime() < 86400000)));
                 
+                // משמיע צליל פעם אחת בלבד לאותה דקה
                 if (!isDone && !playedFor.current.has(t.id + hhmm)) {
                    shouldRing = true;
-                   taskNameForNotification = t.name;
                    playedFor.current.add(t.id + hhmm);
                 }
              }
@@ -1508,36 +1482,15 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
 
           if (shouldRing) {
              const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-             audio.play().catch(e => console.log('Audio blocked', e));
-
-             if ("Notification" in window && Notification.permission === "granted") {
-               new Notification("תזכורת למשימה! 🔔", { 
-                 body: `הגיע הזמן לביצוע: ${taskNameForNotification}`, 
-                 icon: "https://emojicdn.elk.sh/🌟" 
-               });
-               if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
-             }
+             audio.play().catch(e => console.log('Audio blocked by browser', e));
           }
-        }, 5000); 
+        }, 5000); // בודק כל 5 שניות
         return () => clearInterval(interval);
-      }, [data.tasks, data.completions, data.ping, child.id]);
-
-      const enableNotifications = () => {
-        if (!("Notification" in window)) {
-          alert("הדפדפן שלך לא תומך בהתראות קופצות");
-          return;
-        }
-        Notification.requestPermission().then(permission => {
-          if (permission === "granted") {
-            fireConfetti();
-            new Notification("מעולה! 🎉", { body: "ההתראות הופעלו בהצלחה בטלפון זה" });
-          } else {
-            alert("חובה לאשר התראות בהגדרות הדפדפן כדי שזה יעבוד");
-          }
-        });
-      };
+      }, [data.tasks, data.completions, child.id]);
       
-      if (section === "academy") return <Academy child={child} data={data} onEarn={onEarn} onBack={() => setSection("tasks")} />;
+      if (section === "academy") {
+        return <Academy child={child} data={data} onEarn={onEarn} onBack={() => setSection("tasks")} />;
+      }
       
       const todayTasks  = data.tasks.filter((t) => t.assignedTo.includes(child.id) && t.active && t.frequency !== "ondemand"); 
       const demandTasks = data.tasks.filter((t) => t.assignedTo.includes(child.id) && t.active && t.frequency === "ondemand");
@@ -1554,11 +1507,14 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
 
       return (
         <div style={{ minHeight: "100vh", background: C.bg, direction: "rtl" }}>
+          {/* header */}
           <div style={{ background: child.colorGrad, padding: "48px 20px 24px", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: -30, left: -30, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,.1)" }} />
+            
             <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 16 }}>
               <p style={{ color: "rgba(255,255,255,.85)", fontSize: 13, fontWeight: 600, margin: 0 }}>{new Date().toLocaleDateString("he-IL", { weekday: "long" })}</p>
             </div>
+
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
               <ChildAvatar child={child} size={64} radius={20} />
               <div>
@@ -1566,11 +1522,6 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
                 <h2 style={{ color: "white", fontSize: 26, fontWeight: 900, margin: "2px 0 0 0" }}>{child.name}! 👋</h2>
               </div>
             </div>
-            
-            <button onClick={enableNotifications} style={{ background: 'white', border: `none`, color: child.color, borderRadius: 10, padding: '6px 12px', fontSize: 12, fontWeight: 800, marginBottom: 16, boxShadow: C.ssm, display: "flex", alignItems: "center", gap: 5 }}>
-              <span>🔔</span> הפעל התראות בטלפון זה
-            </button>
-
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
               {[["💰","יתרה",fmt(child.balance)],["⭐","נקודות",`${child.points}`],["📤","ממתינות",`${myPending.length}`]].map(([ic,l,v]) => (
                 <div key={l} style={{ background: "rgba(255,255,255,.2)", borderRadius: 14, padding: "10px 8px", textAlign: "center" }}>
@@ -1583,9 +1534,13 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
           </div>
 
           <div style={{ padding: "16px 16px 90px" }}>
+            
+            {/* ACADEMY BUTTON */}
             <button onClick={() => setSection("academy")} className="btn card" style={{ width: '100%', background: C.primary, color: 'white', fontWeight: 900, fontSize: 19, padding: 22, border: 'none', borderRadius: 20, marginBottom: 25, boxShadow: `0 8px 20px ${C.primary}44` }}>
               🎓 האקדמיה: בואו להרוויח כסף!
             </button>
+
+            {/* saving goal */}
             <div style={{ background: "white", borderRadius: 20, padding: "14px 16px", boxShadow: C.sh, border: `2px solid ${child.colorLight}`, marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <p style={{ fontWeight: 700, fontSize: 14, color: C.text, margin: 0 }}>🎯 {child.savingGoal.name}</p>
@@ -1597,6 +1552,8 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
                 {left > 0 ? <span style={{ color: child.color, fontWeight: 700 }}>נשאר {fmt(left)} 🚀</span> : <span style={{ color: C.green, fontWeight: 700 }}>🎉 הגעת ליעד!</span>}
               </div>
             </div>
+
+            {/* section tabs */}
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
               {[["tasks","📋 משימות"],["savings","💰 כסף"]].map(([id, l]) => (
                 <button key={id} onClick={() => setSection(id)} className="btn" style={{ flex: 1, padding: "11px", borderRadius: 14, border: "none", background: section === id ? child.color : "white", color: section === id ? "white" : C.mid, fontWeight: 700, fontSize: 14, boxShadow: C.ssm }}>
@@ -1609,7 +1566,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
               <>
                 {myPending.length > 0 && (
                   <div style={{ background: "#FFFBEB", borderRadius: 18, padding: "14px 16px", marginBottom: 14, border: "2px solid #FDE68A" }}>
-                    <p style={{ fontWeight: 800, fontSize: 14, color: C.amber, marginBottom: 10, margin: 0 }}>⏳ ממתינות ({myPending.length})</p>
+                    <p style={{ fontWeight: 800, fontSize: 14, color: C.amber, marginBottom: 10, margin: 0 }}>⏳ ממתינות לאישור הורה ({myPending.length})</p>
                     <div style={{ marginTop: 10 }}>
                       {myPending.map((cp) => {
                         const t = data.tasks.find((x) => x.id === cp.taskId);
@@ -1624,6 +1581,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
                     </div>
                   </div>
                 )}
+
                 <p style={{ fontWeight: 700, fontSize: 15, color: C.mid, marginBottom: 10 }}>משימות היום</p>
                 {todayTasks.length === 0 ? <EmptyState icon="🎉" text="אין משימות לעכשיו!" /> : todayTasks.map((t) => {
                   const isPending = pendingIds.has(t.id);
@@ -1632,27 +1590,38 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
                   const tt = TASK_TYPES[t.type] || TASK_TYPES.routine;
                   
                   return (
-                    <div key={t.id} style={{ background: isRinging ? "#FEF2F2" : "white", borderRadius: 18, padding: "14px 16px", marginBottom: 10, boxShadow: isRinging ? `0 0 15px ${C.red}88` : C.ssm, border: `2px solid ${isRinging ? C.red : isDone ? C.green + "44" : isPending ? C.amber + "44" : C.border}`, opacity: isDone ? 0.75 : 1, transition: "all 0.3s ease" }}>
+                    <div key={t.id} style={{ 
+                      background: isRinging ? "#FEF2F2" : "white", 
+                      borderRadius: 18, padding: "14px 16px", marginBottom: 10, 
+                      boxShadow: isRinging ? `0 0 15px ${C.red}88` : C.ssm, 
+                      border: `2px solid ${isRinging ? C.red : isDone ? C.green + "44" : isPending ? C.amber + "44" : C.border}`, 
+                      opacity: isDone ? 0.75 : 1, transition: "all 0.3s ease" 
+                    }}>
                       <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: isPending || isDone ? 0 : 12 }}>
                         <div style={{ width: 46, height: 46, borderRadius: 14, background: tt.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{t.icon}</div>
                         <div style={{ flex: 1 }}>
                           <p style={{ fontWeight: 700, fontSize: 15, color: isRinging ? C.red : (isDone ? C.soft : C.text), margin: 0 }}>
                             {t.name} {isRinging && "🚨 עכשיו!"}
                           </p>
+                          <p style={{ fontSize: 11, color: C.soft, margin: "2px 0 0 0" }}>מאת: {t.createdBy || "אבא"}</p>
                           <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
                             {t.remindTime && <Badge color={isRinging ? C.red : C.primary}>⏰ {t.remindTime}</Badge>}
                             {(t.rewardType === "money" || t.rewardType === "both") && <Badge color={C.green}>💰 +{fmt(t.rewardAmount)}</Badge>}
+                            {(t.rewardType === "points" || t.rewardType === "both") && <Badge color={C.amber}>⭐ +{t.rewardPoints}</Badge>}
                           </div>
                         </div>
                         {isDone && <span style={{ fontSize: 24 }}>✅</span>}
                         {isPending && <Badge color={C.amber}>ממתין</Badge>}
                       </div>
                       {!isDone && !isPending && (
-                        <button onClick={() => onComplete(t.id, child.id)} className="btn" style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: isRinging ? C.red : child.colorGrad, color: "white", fontWeight: 800, fontSize: 15 }}>✅ ביצעתי!</button>
+                        <button onClick={() => onComplete(t.id, child.id)} className="btn" style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: isRinging ? C.red : child.colorGrad, color: "white", fontWeight: 800, fontSize: 15 }}>
+                          ✅ ביצעתי!
+                        </button>
                       )}
                     </div>
                   );
                 })}
+
                 {demandTasks.length > 0 && (
                   <>
                     <p style={{ fontWeight: 700, fontSize: 15, color: C.mid, marginBottom: 10, marginTop: 16 }}>משימות זמינות</p>
@@ -1661,20 +1630,32 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
                       const isRinging = t.remindTime && t.remindTime === currentTime && !isPending;
                       const tt = TASK_TYPES[t.type] || TASK_TYPES.routine;
                       return (
-                        <div key={t.id} style={{ background: isRinging ? "#FEF2F2" : "white", borderRadius: 18, padding: "14px 16px", marginBottom: 10, boxShadow: isRinging ? `0 0 15px ${C.red}88` : C.ssm, border: `2px solid ${isRinging ? C.red : isPending ? C.amber + "44" : C.border}`, transition: "all 0.3s ease" }}>
+                        <div key={t.id} style={{ 
+                          background: isRinging ? "#FEF2F2" : "white", 
+                          borderRadius: 18, padding: "14px 16px", marginBottom: 10, 
+                          boxShadow: isRinging ? `0 0 15px ${C.red}88` : C.ssm, 
+                          border: `2px solid ${isRinging ? C.red : isPending ? C.amber + "44" : C.border}`, 
+                          transition: "all 0.3s ease" 
+                        }}>
                           <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: isPending ? 0 : 12 }}>
                             <div style={{ width: 46, height: 46, borderRadius: 14, background: tt.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{t.icon}</div>
                             <div style={{ flex: 1 }}>
-                              <p style={{ fontWeight: 700, fontSize: 15, color: isRinging ? C.red : C.text, margin: 0 }}>{t.name} {isRinging && "🚨 עכשיו!"}</p>
+                              <p style={{ fontWeight: 700, fontSize: 15, color: isRinging ? C.red : C.text, margin: 0 }}>
+                                {t.name} {isRinging && "🚨 עכשיו!"}
+                              </p>
+                              <p style={{ fontSize: 11, color: C.soft, margin: "2px 0 0 0" }}>מאת: {t.createdBy || "אבא"}</p>
                               <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
                                 {t.remindTime && <Badge color={isRinging ? C.red : C.primary}>⏰ {t.remindTime}</Badge>}
                                 {(t.rewardType === "money" || t.rewardType === "both") && <Badge color={C.green}>💰 +{fmt(t.rewardAmount)}</Badge>}
+                                {(t.rewardType === "points" || t.rewardType === "both") && <Badge color={C.amber}>⭐ +{t.rewardPoints}</Badge>}
                               </div>
                             </div>
                             {isPending && <Badge color={C.amber}>ממתין</Badge>}
                           </div>
                           {!isPending && (
-                            <button onClick={() => onComplete(t.id, child.id)} className="btn" style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: isRinging ? C.red : child.colorGrad, color: "white", fontWeight: 800, fontSize: 15 }}>✅ ביצעתי!</button>
+                            <button onClick={() => onComplete(t.id, child.id)} className="btn" style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: isRinging ? C.red : child.colorGrad, color: "white", fontWeight: 800, fontSize: 15 }}>
+                              ✅ ביצעתי!
+                            </button>
                           )}
                         </div>
                       );
@@ -1683,6 +1664,7 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
                 )}
               </>
             )}
+
             {section === "savings" && (
               <>
                 <div style={{ background: "white", borderRadius: 20, padding: "14px 16px", boxShadow: C.ssm, marginBottom: 16 }}>
@@ -1721,11 +1703,13 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
        PARENT SHELL
     ══════════════════════════════════════════════ */
 
-	function ParentShell({ data, setData, onLogout, showToast, loggedParent }) {
+    function ParentShell({ data, setData, onLogout, showToast, loggedParent }) {
       const [tab, setTab] = useState("children");
       const [sub, setSub] = useState(null); 
       const [subParam, setSubParam] = useState(null);
       const isAdmin = loggedParent?.role === "admin";
+      
+      // משתנה עזר: האם זה אלעד?
       const isElad = loggedParent?.name === "אלעד";
 
       function go(screen, param = null) { setSub(screen); setSubParam(param); }
@@ -1738,7 +1722,8 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
         const cp = data.completions.find((c) => c.id === id);
         const t  = data.tasks.find((x) => x.id === cp?.taskId);
         if (!cp || !t) return;
-        fireConfetti();
+        
+        fireConfetti(); // <--- קונפטי למסך אישור!
         setData((prev) => {
           let ch = [...prev.children];
           let tr = [...prev.transactions];
@@ -1760,17 +1745,11 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
       }
 
       function saveTask(t) {
+        // הוספת "מאת מי" אם זה חדש
         const taskWithAuthor = { ...t, createdBy: t.createdBy || loggedParent.name };
         setData((prev) => ({ ...prev, tasks: prev.tasks.find((x) => x.id === t.id) ? prev.tasks.map((x) => x.id === t.id ? taskWithAuthor : x) : [...prev.tasks, taskWithAuthor] }));
         showToast(subParam ? "✅ משימה עודכנה" : "✅ משימה נוצרה");
         back();
-      }
-      
-      // שכפול משימה לחידוש
-      function duplicateTask(t) {
-        const newTask = { ...t, id: uid(), name: t.name + " (העתק)", active: true };
-        setData((prev) => ({ ...prev, tasks: [newTask, ...prev.tasks] }));
-        showToast("🔄 המשימה שוכפלה בהצלחה!");
       }
       
       function toggleTask(id) {
@@ -1789,43 +1768,52 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
         backTo("fm");
       }
 
-      // שליחת פינג לבדיקת התראות
-      function pingChild(childId) {
-        setData((prev) => ({ ...prev, ping: { childId, timestamp: Date.now() } }));
-        showToast("📡 התראה נשלחה! יצפצף אצל הילד תוך 15 שניות");
-      }
-
       function addBonus(childId, amount, desc) {
-        setData((prev) => ({ ...prev, children: prev.children.map((c) => c.id === childId ? { ...c, balance: c.balance + amount, totalEarned: c.totalEarned + amount } : c), transactions: [...prev.transactions, { id: uid(), childId, type: "bonus", amount, desc, date: new Date().toISOString() }] }));
+        setData((prev) => ({
+          ...prev,
+          children: prev.children.map((c) => c.id === childId ? { ...c, balance: c.balance + amount, totalEarned: c.totalEarned + amount } : c),
+          transactions: [...prev.transactions, { id: uid(), childId, type: "bonus", amount, desc, date: new Date().toISOString() }],
+        }));
         showToast(`🎁 בונוס נוסף!`);
       }
       
       function addExpense(childId, amount, desc) {
-        setData((prev) => ({ ...prev, children: prev.children.map((c) => c.id === childId ? { ...c, balance: Math.max(0, c.balance - amount), totalSpent: c.totalSpent + amount } : c), transactions: [...prev.transactions, { id: uid(), childId, type: "expense", amount: -amount, desc, date: new Date().toISOString() }] }));
+        setData((prev) => ({
+          ...prev,
+          children: prev.children.map((c) => c.id === childId ? { ...c, balance: Math.max(0, c.balance - amount), totalSpent: c.totalSpent + amount } : c),
+          transactions: [...prev.transactions, { id: uid(), childId, type: "expense", amount: -amount, desc, date: new Date().toISOString() }],
+        }));
         showToast("💸 הוצאה נרשמה", "warn");
       }
 
       function resetAllData() {
-        if (window.confirm("לאפס לילדים הכל? (משימות יישארו)")) {
-          setData((prev) => ({ ...prev, children: prev.children.map(c => ({ ...c, balance: 0, totalEarned: 0, totalSpent: 0, points: 0 })), completions: [], transactions: [] }));
-          showToast("♻️ אופס בהצלחה!");
+        if (window.confirm("האם אתה בטוח שברצונך לאפס לילדים את כל הכסף, הנקודות וההיסטוריה? (המשימות יישארו)")) {
+          setData((prev) => ({
+            ...prev,
+            children: prev.children.map(c => ({ ...c, balance: 0, totalEarned: 0, totalSpent: 0, points: 0 })),
+            completions: [],
+            transactions: []
+          }));
+          showToast("♻️ הנתונים אופסו בהצלחה!");
         }
       }
 
       function renderSub() {
-        if (sub === "cd") return <ChildDetailScreen child={data.children.find((c) => c.id === subParam)} data={data} onBack={back} onApprove={approveCp} onReject={rejectCp} />;
-        if (sub === "tf") return <TaskFormScreen task={subParam} children={data.children} onSave={saveTask} onDelete={deleteTask} onBack={back} />;
-        if (sub === "fm") return <FamilyMgmtScreen data={data} onBack={back} onAddChild={() => go("aec", { editing: null })} onEditChild={(ch) => go("aec", { editing: ch })} onPingChild={pingChild} />;
-        if (sub === "aec") return <AddEditChildScreen child={subParam?.editing} onSave={saveChild} onBack={() => backTo("fm")} />;
+        if (sub === "cd")     return <ChildDetailScreen child={data.children.find((c) => c.id === subParam)} data={data} onBack={back} onApprove={approveCp} onReject={rejectCp} />;
+        if (sub === "tf")     return <TaskFormScreen task={subParam} children={data.children} onSave={saveTask} onDelete={deleteTask} onBack={back} />;
+        if (sub === "fm")     return <FamilyMgmtScreen data={data} onBack={back} onAddChild={() => go("aec", { editing: null })} onEditChild={(ch) => go("aec", { editing: ch })} />;
+        if (sub === "aec")    return <AddEditChildScreen child={subParam?.editing} onSave={saveChild} onBack={() => backTo("fm")} />;
+        if (sub === "notifs") return <NotificationsScreen onBack={back} />;
+        if (sub === "appear") return <AppearanceScreen onBack={back} />;
         return null;
       }
 
       function renderTab() {
         if (tab === "children")  return <ChildrenTab data={data} setData={setData} isAdmin={isAdmin} onChildClick={(id) => go("cd", id)} onAddChild={() => go("aec", { editing: null })} />;
-        if (tab === "tasks")     return <TasksTab data={data} onAdd={() => go("tf", null)} onEdit={(t) => go("tf", t)} onToggle={toggleTask} onDuplicate={duplicateTask} />;
+        if (tab === "tasks")     return <TasksTab data={data} onAdd={() => go("tf", null)} onEdit={(t) => go("tf", t)} onToggle={toggleTask} />;
         if (tab === "approvals") return <ApprovalsTab data={data} onApprove={approveCp} onReject={rejectCp} />;
         if (tab === "savings")   return <SavingsTab data={data} onBonus={addBonus} onExpense={addExpense} />;
-        if (tab === "settings" && isAdmin) return <SettingsTab data={data} onFamilyMgmt={() => go("fm")} onResetData={resetAllData} />;
+        if (tab === "settings" && isAdmin) return <SettingsTab data={data} onFamilyMgmt={() => go("fm")} onNotifications={() => go("notifs")} onAppearance={() => go("appear")} onResetData={resetAllData} />;
         return null;
       }
 
@@ -1836,7 +1824,8 @@ function AddEditChildScreen({ child: init, onSave, onBack }) {
               ? <button onClick={back} className="btn" style={{ background: "none", border: "none", color: C.primary, fontWeight: 700, fontSize: 24, padding: 0, lineHeight: 1 }}>→</button>
               : <div style={{ fontWeight: 900, fontSize: 18, color: C.primary }}>
                   שלום {loggedParent.name} 👋 
-                  {isElad && <span style={{ marginRight: '5px' }}>🛡️</span>}
+                  {/* הוספת סמל מנהל רק אם השם הוא אלעד */}
+                  {loggedParent.name === "אלעד" && <span style={{ marginRight: '5px' }}>🛡️</span>}
                 </div>
             }
             <button onClick={onLogout} className="btn" style={{ background: "#F3F4F6", border: "none", borderRadius: 10, padding: "7px 13px", color: C.mid, fontWeight: 700, fontSize: 13 }}>יציאה</button>
