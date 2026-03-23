@@ -20,6 +20,9 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+
   <style>
     * { box-sizing: border-box; font-family: 'Rubik', sans-serif; }
     body { margin: 0; background-color: #FAF8FF; -webkit-tap-highlight-color: transparent; }
@@ -38,6 +41,20 @@
 
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
+
+    // אתחול פיירבייס בתוך הקוד
+    const firebaseConfig = {
+      apiKey: "AIzaSyD98iSDj8ggkfwsx9vIOVIcJ19c5X1g3cc",
+      authDomain: "elkayam-kash.firebaseapp.com",
+      projectId: "elkayam-kash",
+      storageBucket: "elkayam-kash.firebasestorage.app",
+      messagingSenderId: "306762891076",
+      appId: "1:306762891076:web:08b3d7a0d0575aada96111"
+    };
+    if (!window.firebase.apps.length) {
+      window.firebase.initializeApp(firebaseConfig);
+    }
+    const messaging = window.firebase.messaging();
 
     const fireConfetti = () => {
       confetti({
@@ -1443,7 +1460,7 @@
     }
 	
 
-	/* ══════════════════════════════════════════════
+    /* ══════════════════════════════════════════════
        CHILD DASHBOARD
     ══════════════════════════════════════════════ */
 
@@ -1451,35 +1468,27 @@
       const [section, setSection] = useState("tasks");
       const [currentTime, setCurrentTime] = useState("");
       const playedFor = useRef(new Set());
-      const lastPing = useRef(0); // <--- זו השורה שגרמה למסך השחור!
+      const lastPing = useRef(0);
       
-      // שעון ובדיקת התראות משודרג
+      // 1. האזנה להתראות פוש כשהאפליקציה פתוחה
       useEffect(() => {
-        if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
-          Notification.requestPermission();
-        }
-
-        // האזנה לפינג בדיקה מאבא
-        if (data.ping && data.ping.childId === child.id) {
-          if (data.ping.timestamp > lastPing.current) {
-            lastPing.current = data.ping.timestamp;
+        if (typeof messaging !== 'undefined') {
+          const unsubscribe = messaging.onMessage((payload) => {
+            console.log('Message received. ', payload);
             const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-            audio.play().catch(e => console.log('Audio blocked', e));
-            
-            if ("Notification" in window && Notification.permission === "granted") {
-               try {
-                 new Notification("בדיקת מערכת! 🔔", { 
-                   body: `היי ${child.name}, ההתראות עובדות מעולה!`, 
-                   icon: "https://emojicdn.elk.sh/🌟" 
-                 });
-                 if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
-               } catch (e) {
-                 console.log("Notification error", e);
-               }
-            }
-          }
+            audio.play().catch(()=>{});
+            new Notification(payload.notification?.title || "התראה! 🔔", {
+              body: payload.notification?.body,
+              icon: "https://emojicdn.elk.sh/🌟"
+            });
+            if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+          });
+          return () => unsubscribe();
         }
+      }, []);
 
+      // 2. השעון הפנימי לתזכורות שגרתיות
+      useEffect(() => {
         const interval = setInterval(() => {
           const d = new Date();
           const hhmm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -1491,11 +1500,9 @@
 
           activeTasks.forEach(t => {
              if (t.remindTime && t.remindTime === hhmm) {
-                // בודקים אם המשימה לא בוצעה או ממתינה היום
                 const isDone = data.completions.some(c => c.taskId === t.id && c.childId === child.id && 
                   (c.status === 'pending' || (c.status === 'approved' && Date.now() - new Date(c.completedAt).getTime() < 86400000)));
                 
-                // משמיע צליל ומקפיץ התראה פעם אחת בלבד לאותה דקה
                 if (!isDone && !playedFor.current.has(t.id + hhmm)) {
                    shouldRing = true;
                    taskNameForNotification = t.name;
@@ -1505,11 +1512,9 @@
           });
 
           if (shouldRing) {
-             // צליל
              const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-             audio.play().catch(e => console.log('Audio blocked by browser', e));
+             audio.play().catch(e => console.log('Audio blocked', e));
 
-             // התראה קופצת + רטט
              if ("Notification" in window && Notification.permission === "granted") {
                try {
                  new Notification("תזכורת למשימה! 🔔", { 
@@ -1517,28 +1522,42 @@
                    icon: "https://emojicdn.elk.sh/🌟" 
                  });
                  if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
-               } catch(e) {
-                 console.log("Notification error", e);
-               }
+               } catch(e) { console.log(e); }
              }
           }
-        }, 5000); // בודק כל 5 שניות
+        }, 5000); 
         return () => clearInterval(interval);
-      }, [data.tasks, data.completions, data.ping, child.id]);
+      }, [data.tasks, data.completions, child.id]);
 
-      const enableNotifications = () => {
+      // 3. הפעלת התראות ומשיכת הטוקן (תעודת זהות)
+      const enableNotifications = async () => {
         if (!("Notification" in window)) {
           alert("הדפדפן שלך לא תומך בהתראות קופצות");
           return;
         }
-        Notification.requestPermission().then(permission => {
+        try {
+          const permission = await Notification.requestPermission();
           if (permission === "granted") {
-            fireConfetti();
-            new Notification("מעולה! 🎉", { body: "ההתראות הופעלו בהצלחה בטלפון זה" });
+            const currentToken = await messaging.getToken({ 
+              vapidKey: "BCX5pKraF9jGMccFy6UUPMNiBKU7830dz-4YMjRGVLS9iYMgAdqIUx5K65Qg0_dYybPaeOQS4g6HXoJUzEspTk4" 
+            });
+            
+            if (currentToken) {
+              console.log("FCM Token:", currentToken);
+              // שמירת הטוקן אצל הילד!
+              data.children.find(c => c.id === child.id).fcmToken = currentToken;
+              fireConfetti();
+              alert("מעולה! הטלפון חובר בהצלחה. בקש מאבא לשלוח התראת בדיקה!");
+            } else {
+              alert("לא הצלחנו למשוך טוקן מגוגל.");
+            }
           } else {
-            alert("חובה לאשר התראות בהגדרות הדפדפן כדי שזה יעבוד");
+            alert("חובה לאשר התראות קופצות בהגדרות הדפדפן.");
           }
-        });
+        } catch(e) {
+          console.error("FCM Error", e);
+          alert("שגיאה ברישום להתראות.");
+        }
       };
       
       if (section === "academy") {
@@ -1549,10 +1568,8 @@
       const demandTasks = data.tasks.filter((t) => t.assignedTo.includes(child.id) && t.active && t.frequency === "ondemand");
       const myPending   = data.completions.filter((c) => c.childId === child.id && c.status === "pending");
       const myTxns      = data.transactions.filter((t) => t.childId === child.id).slice().reverse().slice(0, 8);
-      
       const pct  = Math.min(100, (child.balance / child.savingGoal.targetAmount) * 100);
       const left = Math.max(0, child.savingGoal.targetAmount - child.balance);
-      
       const pendingIds   = new Set(myPending.map((c) => c.taskId));
       const completedToday = new Set(
         data.completions.filter((c) => c.childId === child.id && c.status === "approved" && Date.now() - new Date(c.completedAt).getTime() < 86400000).map((c) => c.taskId)
@@ -1560,7 +1577,6 @@
 
       return (
         <div style={{ minHeight: "100vh", background: C.bg, direction: "rtl" }}>
-          {/* header */}
           <div style={{ background: child.colorGrad, padding: "48px 20px 24px", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: -30, left: -30, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,.1)" }} />
             
@@ -1576,9 +1592,9 @@
               </div>
             </div>
             
-            {/* כפתור להפעלת התראות */}
-            <button onClick={enableNotifications} style={{ background: 'white', border: `none`, color: child.color, borderRadius: 10, padding: '6px 12px', fontSize: 12, fontWeight: 800, marginBottom: 16, boxShadow: C.ssm, display: "flex", alignItems: "center", gap: 5 }}>
-              <span>🔔</span> הפעל התראות בטלפון זה
+            {/* כפתור הפעלת התראות PUSH */}
+            <button onClick={enableNotifications} style={{ background: 'white', border: `none`, color: child.color, borderRadius: 10, padding: '8px 12px', fontSize: 13, fontWeight: 800, marginBottom: 16, boxShadow: C.ssm, display: "flex", alignItems: "center", gap: 5 }}>
+              <span>🔔</span> הירשם להתראות חכמות
             </button>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
@@ -1594,12 +1610,10 @@
 
           <div style={{ padding: "16px 16px 90px" }}>
             
-            {/* ACADEMY BUTTON */}
             <button onClick={() => setSection("academy")} className="btn card" style={{ width: '100%', background: C.primary, color: 'white', fontWeight: 900, fontSize: 19, padding: 22, border: 'none', borderRadius: 20, marginBottom: 25, boxShadow: `0 8px 20px ${C.primary}44` }}>
               🎓 האקדמיה: בואו להרוויח כסף!
             </button>
 
-            {/* saving goal */}
             <div style={{ background: "white", borderRadius: 20, padding: "14px 16px", boxShadow: C.sh, border: `2px solid ${child.colorLight}`, marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <p style={{ fontWeight: 700, fontSize: 14, color: C.text, margin: 0 }}>🎯 {child.savingGoal.name}</p>
@@ -1612,7 +1626,6 @@
               </div>
             </div>
 
-            {/* section tabs */}
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
               {[["tasks","📋 משימות"],["savings","💰 כסף"]].map(([id, l]) => (
                 <button key={id} onClick={() => setSection(id)} className="btn" style={{ flex: 1, padding: "11px", borderRadius: 14, border: "none", background: section === id ? child.color : "white", color: section === id ? "white" : C.mid, fontWeight: 700, fontSize: 14, boxShadow: C.ssm }}>
@@ -1625,7 +1638,7 @@
               <>
                 {myPending.length > 0 && (
                   <div style={{ background: "#FFFBEB", borderRadius: 18, padding: "14px 16px", marginBottom: 14, border: "2px solid #FDE68A" }}>
-                    <p style={{ fontWeight: 800, fontSize: 14, color: C.amber, marginBottom: 10, margin: 0 }}>⏳ ממתינות לאישור הורה ({myPending.length})</p>
+                    <p style={{ fontWeight: 800, fontSize: 14, color: C.amber, marginBottom: 10, margin: 0 }}>⏳ ממתינות לאישור הורה</p>
                     <div style={{ marginTop: 10 }}>
                       {myPending.map((cp) => {
                         const t = data.tasks.find((x) => x.id === cp.taskId);
@@ -1641,116 +1654,31 @@
                   </div>
                 )}
 
-                <p style={{ fontWeight: 700, fontSize: 15, color: C.mid, marginBottom: 10 }}>משימות היום</p>
-                {todayTasks.length === 0 ? <EmptyState icon="🎉" text="אין משימות לעכשיו!" /> : todayTasks.map((t) => {
+                <p style={{ fontWeight: 700, fontSize: 15, color: C.mid, marginBottom: 10 }}>משימות</p>
+                {todayTasks.map((t) => {
                   const isPending = pendingIds.has(t.id);
                   const isDone    = completedToday.has(t.id);
-                  const isRinging = t.remindTime && t.remindTime === currentTime && !isDone && !isPending;
                   const tt = TASK_TYPES[t.type] || TASK_TYPES.routine;
-                  
                   return (
-                    <div key={t.id} style={{ 
-                      background: isRinging ? "#FEF2F2" : "white", 
-                      borderRadius: 18, padding: "14px 16px", marginBottom: 10, 
-                      boxShadow: isRinging ? `0 0 15px ${C.red}88` : C.ssm, 
-                      border: `2px solid ${isRinging ? C.red : isDone ? C.green + "44" : isPending ? C.amber + "44" : C.border}`, 
-                      opacity: isDone ? 0.75 : 1, transition: "all 0.3s ease" 
-                    }}>
+                    <div key={t.id} style={{ background: "white", borderRadius: 18, padding: "14px 16px", marginBottom: 10, boxShadow: C.ssm, border: `2px solid ${isDone ? C.green + "44" : isPending ? C.amber + "44" : C.border}`, opacity: isDone ? 0.75 : 1 }}>
                       <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: isPending || isDone ? 0 : 12 }}>
                         <div style={{ width: 46, height: 46, borderRadius: 14, background: tt.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{t.icon}</div>
                         <div style={{ flex: 1 }}>
-                          <p style={{ fontWeight: 700, fontSize: 15, color: isRinging ? C.red : (isDone ? C.soft : C.text), margin: 0 }}>
-                            {t.name} {isRinging && "🚨 עכשיו!"}
-                          </p>
-                          <p style={{ fontSize: 11, color: C.soft, margin: "2px 0 0 0" }}>מאת: {t.createdBy || "אבא"}</p>
+                          <p style={{ fontWeight: 700, fontSize: 15, color: (isDone ? C.soft : C.text), margin: 0 }}>{t.name}</p>
                           <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
-                            {t.remindTime && <Badge color={isRinging ? C.red : C.primary}>⏰ {t.remindTime}</Badge>}
+                            {t.remindTime && <Badge color={C.primary}>⏰ {t.remindTime}</Badge>}
                             {(t.rewardType === "money" || t.rewardType === "both") && <Badge color={C.green}>💰 +{fmt(t.rewardAmount)}</Badge>}
-                            {(t.rewardType === "points" || t.rewardType === "both") && <Badge color={C.amber}>⭐ +{t.rewardPoints}</Badge>}
                           </div>
                         </div>
                         {isDone && <span style={{ fontSize: 24 }}>✅</span>}
                         {isPending && <Badge color={C.amber}>ממתין</Badge>}
                       </div>
                       {!isDone && !isPending && (
-                        <button onClick={() => onComplete(t.id, child.id)} className="btn" style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: isRinging ? C.red : child.colorGrad, color: "white", fontWeight: 800, fontSize: 15 }}>
-                          ✅ ביצעתי!
-                        </button>
+                        <button onClick={() => onComplete(t.id, child.id)} className="btn" style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: child.colorGrad, color: "white", fontWeight: 800, fontSize: 15 }}>✅ ביצעתי!</button>
                       )}
                     </div>
                   );
                 })}
-
-                {demandTasks.length > 0 && (
-                  <>
-                    <p style={{ fontWeight: 700, fontSize: 15, color: C.mid, marginBottom: 10, marginTop: 16 }}>משימות זמינות</p>
-                    {demandTasks.map((t) => {
-                      const isPending = pendingIds.has(t.id);
-                      const isRinging = t.remindTime && t.remindTime === currentTime && !isPending;
-                      const tt = TASK_TYPES[t.type] || TASK_TYPES.routine;
-                      return (
-                        <div key={t.id} style={{ 
-                          background: isRinging ? "#FEF2F2" : "white", 
-                          borderRadius: 18, padding: "14px 16px", marginBottom: 10, 
-                          boxShadow: isRinging ? `0 0 15px ${C.red}88` : C.ssm, 
-                          border: `2px solid ${isRinging ? C.red : isPending ? C.amber + "44" : C.border}`, 
-                          transition: "all 0.3s ease" 
-                        }}>
-                          <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: isPending ? 0 : 12 }}>
-                            <div style={{ width: 46, height: 46, borderRadius: 14, background: tt.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{t.icon}</div>
-                            <div style={{ flex: 1 }}>
-                              <p style={{ fontWeight: 700, fontSize: 15, color: isRinging ? C.red : C.text, margin: 0 }}>
-                                {t.name} {isRinging && "🚨 עכשיו!"}
-                              </p>
-                              <p style={{ fontSize: 11, color: C.soft, margin: "2px 0 0 0" }}>מאת: {t.createdBy || "אבא"}</p>
-                              <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
-                                {t.remindTime && <Badge color={isRinging ? C.red : C.primary}>⏰ {t.remindTime}</Badge>}
-                                {(t.rewardType === "money" || t.rewardType === "both") && <Badge color={C.green}>💰 +{fmt(t.rewardAmount)}</Badge>}
-                                {(t.rewardType === "points" || t.rewardType === "both") && <Badge color={C.amber}>⭐ +{t.rewardPoints}</Badge>}
-                              </div>
-                            </div>
-                            {isPending && <Badge color={C.amber}>ממתין</Badge>}
-                          </div>
-                          {!isPending && (
-                            <button onClick={() => onComplete(t.id, child.id)} className="btn" style={{ width: "100%", padding: "12px", borderRadius: 12, border: "none", background: isRinging ? C.red : child.colorGrad, color: "white", fontWeight: 800, fontSize: 15 }}>
-                              ✅ ביצעתי!
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
-              </>
-            )}
-
-            {section === "savings" && (
-              <>
-                <div style={{ background: "white", borderRadius: 20, padding: "14px 16px", boxShadow: C.ssm, marginBottom: 16 }}>
-                  <div style={{ display: "flex", justifyContent: "space-around" }}>
-                    {[["הרווחתי", fmt(child.totalEarned), C.green],["הוצאתי", fmt(child.totalSpent), C.red],["נקודות", `${child.points}`, C.amber]].map(([l,v,col]) => (
-                      <div key={l} style={{ textAlign: "center" }}>
-                        <p style={{ fontSize: 11, color: C.soft, marginBottom: 4, margin: 0 }}>{l}</p>
-                        <p style={{ fontWeight: 800, fontSize: 17, color: col, margin: "2px 0 0 0" }}>{v}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <p style={{ fontWeight: 700, fontSize: 15, color: C.mid, marginBottom: 10 }}>תנועות אחרונות</p>
-                {myTxns.length === 0 ? <EmptyState icon="💸" text="אין עדיין תנועות" /> : myTxns.map((tr) => (
-                  <div key={tr.id} style={{ background: "white", borderRadius: 16, padding: "13px 16px", marginBottom: 8, boxShadow: C.ssm, display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 12, background: tr.type === "expense" ? "#FEF2F2" : "#ECFDF5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
-                      {tr.type === "earning" ? "💰" : tr.type === "bonus" ? "🎁" : "🛒"}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: 700, fontSize: 14, color: C.text, margin: 0 }}>{tr.desc}</p>
-                      <p style={{ fontSize: 12, color: C.soft, marginTop: 2, margin: "2px 0 0 0" }}>{relTime(tr.date)}</p>
-                    </div>
-                    <p style={{ fontWeight: 800, fontSize: 16, color: tr.type === "expense" ? C.red : C.green, margin: 0 }}>
-                      {tr.type === "expense" ? "-" : "+"}{fmt(Math.abs(tr.amount))}
-                    </p>
-                  </div>
-                ))}
               </>
             )}
           </div>
@@ -1761,146 +1689,75 @@
     /* ══════════════════════════════════════════════
        PARENT SHELL
     ══════════════════════════════════════════════ */
-
     function ParentShell({ data, setData, onLogout, showToast, loggedParent }) {
-      const [tab, setTab] = useState("children");
+      const [tab, setTab] = useState("children"); 
       const [sub, setSub] = useState(null); 
       const [subParam, setSubParam] = useState(null);
-      const isAdmin = loggedParent?.role === "admin";
-      
+      const isAdmin = loggedParent?.role === "admin"; 
       const isElad = loggedParent?.name === "אלעד";
 
-      function go(screen, param = null) { setSub(screen); setSubParam(param); }
-      function back() { setSub(null); setSubParam(null); }
+      function go(screen, param = null) { setSub(screen); setSubParam(param); } 
+      function back() { setSub(null); setSubParam(null); } 
       function backTo(screen) { setSub(screen); setSubParam(null); }
 
       const pendingCount = data.completions.filter((c) => c.status === "pending").length;
       
       function approveCp(id, note = "") {
-        const cp = data.completions.find((c) => c.id === id);
-        const t  = data.tasks.find((x) => x.id === cp?.taskId);
-        if (!cp || !t) return;
-        
+        const cp = data.completions.find((c) => c.id === id); const t = data.tasks.find((x) => x.id === cp?.taskId); if (!cp || !t) return;
         fireConfetti();
         setData((prev) => {
-          let ch = [...prev.children];
-          let tr = [...prev.transactions];
-          if (t.rewardType === "money" || t.rewardType === "both") {
-            ch = ch.map((c) => c.id === cp.childId ? { ...c, balance: c.balance + t.rewardAmount, totalEarned: c.totalEarned + t.rewardAmount } : c);
-            tr = [...tr, { id: uid(), childId: cp.childId, type: "earning", amount: t.rewardAmount, desc: t.name, date: new Date().toISOString() }];
-          }
-          if (t.rewardType === "points" || t.rewardType === "both") {
-            ch = ch.map((c) => c.id === cp.childId ? { ...c, points: c.points + t.rewardPoints } : c);
-          }
+          let ch = [...prev.children]; let tr = [...prev.transactions];
+          if (t.rewardType === "money" || t.rewardType === "both") { ch = ch.map((c) => c.id === cp.childId ? { ...c, balance: c.balance + t.rewardAmount, totalEarned: c.totalEarned + t.rewardAmount } : c); tr = [...tr, { id: uid(), childId: cp.childId, type: "earning", amount: t.rewardAmount, desc: t.name, date: new Date().toISOString() }]; }
+          if (t.rewardType === "points" || t.rewardType === "both") { ch = ch.map((c) => c.id === cp.childId ? { ...c, points: c.points + t.rewardPoints } : c); }
           return { ...prev, children: ch, transactions: tr, completions: prev.completions.map((c) => c.id === id ? { ...c, status: "approved", approvedAt: new Date().toISOString(), parentNote: note } : c) };
-        });
-        showToast("✅ משימה אושרה!");
+        }); showToast("✅ משימה אושרה!");
       }
-
-      function rejectCp(id, note = "") {
-        setData((prev) => ({ ...prev, completions: prev.completions.map((c) => c.id === id ? { ...c, status: "rejected", approvedAt: new Date().toISOString(), parentNote: note } : c) }));
-        showToast("❌ משימה נדחתה", "error");
-      }
-
-      function saveTask(t) {
-        const taskWithAuthor = { ...t, createdBy: t.createdBy || loggedParent.name };
-        setData((prev) => ({ ...prev, tasks: prev.tasks.find((x) => x.id === t.id) ? prev.tasks.map((x) => x.id === t.id ? taskWithAuthor : x) : [...prev.tasks, taskWithAuthor] }));
-        showToast(subParam ? "✅ משימה עודכנה" : "✅ משימה נוצרה");
-        back();
-      }
+      function rejectCp(id, note = "") { setData((prev) => ({ ...prev, completions: prev.completions.map((c) => c.id === id ? { ...c, status: "rejected", approvedAt: new Date().toISOString(), parentNote: note } : c) })); showToast("❌ משימה נדחתה", "error"); }
       
-      // הוספת פונקציית שכפול
-      function duplicateTask(t) {
-        const newTask = { ...t, id: uid(), name: t.name + " (העתק)", active: true };
-        setData((prev) => ({ ...prev, tasks: [newTask, ...prev.tasks] }));
-        showToast("🔄 המשימה שוכפלה בהצלחה!");
-      }
-
-      function toggleTask(id) {
-        setData((prev) => ({ ...prev, tasks: prev.tasks.map((t) => t.id === id ? { ...t, active: !t.active } : t) }));
-      }
+      function saveTask(t) { const taskWithAuthor = { ...t, createdBy: t.createdBy || loggedParent.name }; setData((prev) => ({ ...prev, tasks: prev.tasks.find((x) => x.id === t.id) ? prev.tasks.map((x) => x.id === t.id ? taskWithAuthor : x) : [...prev.tasks, taskWithAuthor] })); showToast("✅ משימה נשמרה"); back(); }
+      function duplicateTask(t) { const newTask = { ...t, id: uid(), name: t.name + " (העתק)", active: true }; setData((prev) => ({ ...prev, tasks: [newTask, ...prev.tasks] })); showToast("🔄 משימה שוכפלה!"); }
+      function toggleTask(id) { setData((prev) => ({ ...prev, tasks: prev.tasks.map((t) => t.id === id ? { ...t, active: !t.active } : t) })); }
+      function deleteTask(id) { setData((prev) => ({ ...prev, tasks: prev.tasks.filter((t) => t.id !== id) })); showToast("🗑️ נמחקה", "warn"); back(); }
+      function saveChild(ch) { setData((prev) => ({ ...prev, children: prev.children.find((x) => x.id === ch.id) ? prev.children.map((x) => x.id === ch.id ? ch : x) : [...prev.children, ch] })); showToast("✅ ילד נשמר"); backTo("fm"); }
       
-      function deleteTask(id) {
-        setData((prev) => ({ ...prev, tasks: prev.tasks.filter((t) => t.id !== id) }));
-        showToast("🗑️ נמחקה", "warn");
-        back();
-      }
-
-      function saveChild(ch) {
-        setData((prev) => ({ ...prev, children: prev.children.find((x) => x.id === ch.id) ? prev.children.map((x) => x.id === ch.id ? ch : x) : [...prev.children, ch] }));
-        showToast(subParam?.editing ? "✅ ילד עודכן" : "✅ ילד נוסף");
-        backTo("fm");
-      }
-
+      // 📡 פונקציית הפינג החכמה שלנו למנהל
       function pingChild(childId) {
-        setData((prev) => ({ ...prev, ping: { childId, timestamp: Date.now() } }));
-        showToast("📡 התראה נשלחה! יצפצף אצל הילד תוך 15 שניות");
-      }
-
-      function addBonus(childId, amount, desc) {
-        setData((prev) => ({
-          ...prev,
-          children: prev.children.map((c) => c.id === childId ? { ...c, balance: c.balance + amount, totalEarned: c.totalEarned + amount } : c),
-          transactions: [...prev.transactions, { id: uid(), childId, type: "bonus", amount, desc, date: new Date().toISOString() }],
-        }));
-        showToast(`🎁 בונוס נוסף!`);
-      }
-      
-      function addExpense(childId, amount, desc) {
-        setData((prev) => ({
-          ...prev,
-          children: prev.children.map((c) => c.id === childId ? { ...c, balance: Math.max(0, c.balance - amount), totalSpent: c.totalSpent + amount } : c),
-          transactions: [...prev.transactions, { id: uid(), childId, type: "expense", amount: -amount, desc, date: new Date().toISOString() }],
-        }));
-        showToast("💸 הוצאה נרשמה", "warn");
-      }
-
-      function resetAllData() {
-        if (window.confirm("האם אתה בטוח שברצונך לאפס לילדים את כל הכסף, הנקודות וההיסטוריה? (המשימות יישארו)")) {
-          setData((prev) => ({
-            ...prev,
-            children: prev.children.map(c => ({ ...c, balance: 0, totalEarned: 0, totalSpent: 0, points: 0 })),
-            completions: [],
-            transactions: []
-          }));
-          showToast("♻️ הנתונים אופסו בהצלחה!");
+        const c = data.children.find(x => x.id === childId);
+        if (c && c.fcmToken) {
+          // מציגים לך את הטוקן כדי שתוכל להעתיק אותו לפיירבייס!
+          prompt(`הטוקן של ${c.name} מוכן! העתק אותו כדי לשלוח התראה ממסוף Firebase:`, c.fcmToken);
+        } else {
+          showToast("⚠️ לילד זה אין עדיין אישור התראות בטלפון", "error");
         }
       }
 
+      function addBonus(childId, amount, desc) { setData((prev) => ({ ...prev, children: prev.children.map((c) => c.id === childId ? { ...c, balance: c.balance + amount, totalEarned: c.totalEarned + amount } : c), transactions: [...prev.transactions, { id: uid(), childId, type: "bonus", amount, desc, date: new Date().toISOString() }] })); showToast(`🎁 בונוס נוסף!`); }
+      function addExpense(childId, amount, desc) { setData((prev) => ({ ...prev, children: prev.children.map((c) => c.id === childId ? { ...c, balance: Math.max(0, c.balance - amount), totalSpent: c.totalSpent + amount } : c), transactions: [...prev.transactions, { id: uid(), childId, type: "expense", amount: -amount, desc, date: new Date().toISOString() }] })); showToast("💸 הוצאה נרשמה", "warn"); }
+      function resetAllData() { if (window.confirm("לאפס?")) { setData((prev) => ({ ...prev, children: prev.children.map(c => ({ ...c, balance: 0, totalEarned: 0, totalSpent: 0, points: 0 })), completions: [], transactions: [] })); showToast("♻️ אופס!"); } }
+
       function renderSub() {
-        if (sub === "cd")     return <ChildDetailScreen child={data.children.find((c) => c.id === subParam)} data={data} onBack={back} onApprove={approveCp} onReject={rejectCp} />;
-        if (sub === "tf")     return <TaskFormScreen task={subParam} children={data.children} onSave={saveTask} onDelete={deleteTask} onBack={back} />;
-        if (sub === "fm")     return <FamilyMgmtScreen data={data} onBack={back} onAddChild={() => go("aec", { editing: null })} onEditChild={(ch) => go("aec", { editing: ch })} onPingChild={pingChild} />;
-        if (sub === "aec")    return <AddEditChildScreen child={subParam?.editing} onSave={saveChild} onBack={() => backTo("fm")} />;
-        if (sub === "notifs") return <div className="sl"><BackBtn onBack={back}/><EmptyState icon="🔔" text="מערכת התראות מלאה תגיע בקרוב!" /></div>;
-        if (sub === "appear") return <div className="sl"><BackBtn onBack={back}/><EmptyState icon="🎨" text="מערכת עיצוב תגיע בקרוב!" /></div>;
+        if (sub === "cd") return <ChildDetailScreen child={data.children.find((c) => c.id === subParam)} data={data} onBack={back} onApprove={approveCp} onReject={rejectCp} />;
+        if (sub === "tf") return <TaskFormScreen task={subParam} children={data.children} onSave={saveTask} onDelete={deleteTask} onBack={back} />;
+        if (sub === "fm") return <FamilyMgmtScreen data={data} onBack={back} onAddChild={() => go("aec", { editing: null })} onEditChild={(ch) => go("aec", { editing: ch })} onPingChild={pingChild} />;
+        if (sub === "aec") return <AddEditChildScreen child={subParam?.editing} onSave={saveChild} onBack={() => backTo("fm")} />;
         return null;
       }
-
       function renderTab() {
         if (tab === "children")  return <ChildrenTab data={data} setData={setData} isAdmin={isAdmin} onChildClick={(id) => go("cd", id)} onAddChild={() => go("aec", { editing: null })} />;
         if (tab === "tasks")     return <TasksTab data={data} onAdd={() => go("tf", null)} onEdit={(t) => go("tf", t)} onToggle={toggleTask} onDuplicate={duplicateTask} />;
         if (tab === "approvals") return <ApprovalsTab data={data} onApprove={approveCp} onReject={rejectCp} />;
         if (tab === "savings")   return <SavingsTab data={data} onBonus={addBonus} onExpense={addExpense} />;
-        if (tab === "settings" && isAdmin) return <SettingsTab data={data} onFamilyMgmt={() => go("fm")} onNotifications={() => go("notifs")} onAppearance={() => go("appear")} onResetData={resetAllData} />;
+        if (tab === "settings" && isAdmin) return <SettingsTab data={data} onFamilyMgmt={() => go("fm")} onResetData={resetAllData} />;
         return null;
       }
 
       return (
         <div style={{ minHeight: "100vh", background: C.bg, direction: "rtl", paddingBottom: 80 }}>
           <div style={{ background: "white", borderBottom: `1px solid ${C.border}`, padding: "20px 20px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: C.ssm }}>
-            {sub
-              ? <button onClick={back} className="btn" style={{ background: "none", border: "none", color: C.primary, fontWeight: 700, fontSize: 24, padding: 0, lineHeight: 1 }}>→</button>
-              : <div style={{ fontWeight: 900, fontSize: 18, color: C.primary }}>
-                  שלום {loggedParent.name} 👋 
-                  {isElad && <span style={{ marginRight: '5px' }}>🛡️</span>}
-                </div>
-            }
+            {sub ? <button onClick={back} className="btn" style={{ background: "none", border: "none", color: C.primary, fontWeight: 700, fontSize: 24, padding: 0, lineHeight: 1 }}>→</button> : <div style={{ fontWeight: 900, fontSize: 18, color: C.primary }}> שלום {loggedParent.name} 👋 {isElad && <span style={{ marginRight: '5px' }}>🛡️</span>} </div> }
             <button onClick={onLogout} className="btn" style={{ background: "#F3F4F6", border: "none", borderRadius: 10, padding: "7px 13px", color: C.mid, fontWeight: 700, fontSize: 13 }}>יציאה</button>
           </div>
-          <div style={{ padding: "16px 16px 0" }}>
-            {sub ? renderSub() : renderTab()}
-          </div>
+          <div style={{ padding: "16px 16px 0" }}>{sub ? renderSub() : renderTab()}</div>
           {!sub && <BottomNav active={tab} onChange={(id) => { setTab(id); setSub(null); }} pendingBadge={pendingCount} isAdmin={isAdmin} />}
         </div>
       );
@@ -1909,198 +1766,76 @@
     /* ══════════════════════════════════════════════
        FIREBASE REST API & APP ROOT
     ══════════════════════════════════════════════ */
-
     const FB_KEY     = "AIzaSyD98iSDj8ggkfwsx9vIOVIcJ19c5X1g3cc";
     const FB_PROJECT = "elkayam-kash";
     const FB_URL     = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents/app/state`;
     
     async function fbLoad() {
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 4000);
-        const r = await fetch(`${FB_URL}?key=${FB_KEY}`, { signal: controller.signal });
-        clearTimeout(timer);
-        if (!r.ok) return null;
-        const d = await r.json();
-        const str = d?.fields?.appData?.stringValue;
-        return str ? JSON.parse(str) : null;
-      } catch (e) { return null; }
+      try { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 4000); const r = await fetch(`${FB_URL}?key=${FB_KEY}`, { signal: controller.signal }); clearTimeout(timer); if (!r.ok) return null; const d = await r.json(); const str = d?.fields?.appData?.stringValue; return str ? JSON.parse(str) : null; } catch (e) { return null; }
     }
-
     async function fbSave(data) {
-      try {
-        const payload = {
-          fields: {
-            appData: { stringValue: JSON.stringify(data) },
-            updatedAt: { stringValue: new Date().toISOString() },
-          }
-        };
-        await fetch(`${FB_URL}?key=${FB_KEY}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } catch (e) {}
+      try { const payload = { fields: { appData: { stringValue: JSON.stringify(data) }, updatedAt: { stringValue: new Date().toISOString() }, } }; await fetch(`${FB_URL}?key=${FB_KEY}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), }); } catch (e) {}
     }
-
     const LS_KEY = "mishpacha_data_v1";
-    function lsLoad() {
-      try { const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : null; } catch(e) { return null; }
-    }
-    function lsSave(d) {
-      try { localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch(e) {}
-    }
+    function lsLoad() { try { const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : null; } catch(e) { return null; } }
+    function lsSave(d) { try { localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch(e) {} }
 
-    function LoadingScreen() {
-      return (
-        <div style={{ minHeight: "100vh", background: "linear-gradient(150deg,#6C63FF,#C084FC)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", direction: "rtl" }}>
-          <div style={{ fontSize: 70, marginBottom: 20 }}>🌟</div>
-          <p style={{ color: "white", fontSize: 20, fontWeight: 700, margin: 0 }}>טוען נתונים...</p>
-          <p style={{ color: "rgba(255,255,255,.7)", fontSize: 14, marginTop: 8 }}>מתחבר לענן</p>
-        </div>
-      );
-    }
+    function LoadingScreen() { return ( <div style={{ minHeight: "100vh", background: "linear-gradient(150deg,#6C63FF,#C084FC)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", direction: "rtl" }}> <div style={{ fontSize: 70, marginBottom: 20 }}>🌟</div> <p style={{ color: "white", fontSize: 20, fontWeight: 700, margin: 0 }}>טוען נתונים...</p> <p style={{ color: "rgba(255,255,255,.7)", fontSize: 14, marginTop: 8 }}>מתחבר לענן</p> </div> ); }
 
     function App() {
-      const [screen, setScreen]           = useState("splash");
-      const [pinTarget, setPinTarget]     = useState(null);
-      const [loggedChild, setLoggedChild] = useState(null);
-      const [loggedParent, setLoggedParent] = useState(null);
-      const [data, setDataRaw]            = useState(null); 
-      const [toast, setToast]             = useState(null);
-      const lastSavedRef                  = useRef(""); 
-      const pollRef                       = useRef(null);
+      const [screen, setScreen] = useState("splash"); const [pinTarget, setPinTarget] = useState(null); const [loggedChild, setLoggedChild] = useState(null); const [loggedParent, setLoggedParent] = useState(null); const [data, setDataRaw] = useState(null); const [toast, setToast] = useState(null); const lastSavedRef = useRef(""); const pollRef = useRef(null);
       
       useEffect(() => {
-        async function init() {
-          const local = lsLoad() || INIT_DATA;
-          setDataRaw(local);
-          lastSavedRef.current = JSON.stringify(local);
-          
-          const remote = await fbLoad();
-          if (remote) {
-            const remoteStr = JSON.stringify(remote);
-            if (remoteStr !== lastSavedRef.current) {
-              setDataRaw(remote);
-              lsSave(remote);
-              lastSavedRef.current = remoteStr;
-            }
-          } else {
-            fbSave(local);
-          }
-        }
+        async function init() { const local = lsLoad() || INIT_DATA; setDataRaw(local); lastSavedRef.current = JSON.stringify(local); const remote = await fbLoad(); if (remote) { const remoteStr = JSON.stringify(remote); if (remoteStr !== lastSavedRef.current) { setDataRaw(remote); lsSave(remote); lastSavedRef.current = remoteStr; } } else { fbSave(local); } }
         init();
-
-        pollRef.current = setInterval(async () => {
-          const remote = await fbLoad();
-          if (!remote) return;
-          const remoteStr = JSON.stringify(remote);
-          if (remoteStr !== lastSavedRef.current) {
-            setDataRaw(remote);
-            lsSave(remote);
-            lastSavedRef.current = remoteStr;
-          }
-        }, 15000);
-
+        pollRef.current = setInterval(async () => { const remote = await fbLoad(); if (!remote) return; const remoteStr = JSON.stringify(remote); if (remoteStr !== lastSavedRef.current) { setDataRaw(remote); lsSave(remote); lastSavedRef.current = remoteStr; } }, 10000);
         return () => clearInterval(pollRef.current);
       }, []);
 
       useEffect(() => {
         if (data && screen === "splash") {
-          const params = new URLSearchParams(window.location.search);
-          const userParam = params.get("USER"); 
-          
+          const params = new URLSearchParams(window.location.search); const userParam = params.get("USER"); 
           if (userParam) {
             const paramLower = userParam.toLowerCase();
             if (paramLower === "elad") { setLoggedParent({ name: "אלעד", role: "admin" }); setScreen("parent"); return; }
             if (paramLower === "zivit") { setLoggedParent({ name: "זיוית", role: "parent" }); setScreen("parent"); return; }
-            
-            const foundChild = data.children.find(c => {
-              if (paramLower === "elia" && c.name === "אליה") return true;
-              if (paramLower === "lian" && c.name === "ליאן") return true;
-              if (c.username && c.username.toLowerCase() === paramLower) return true;
-              if (c.name === userParam) return true;
-              return false;
-            });
-            
+            const foundChild = data.children.find(c => { if (paramLower === "elia" && c.name === "אליה") return true; if (paramLower === "lian" && c.name === "ליאן") return true; if (c.username && c.username.toLowerCase() === paramLower) return true; if (c.name === userParam) return true; return false; });
             if (foundChild) { setLoggedChild(foundChild.id); setScreen("child"); }
           }
         }
       }, [data, screen]);
       
-      function setData(updater) {
-        setDataRaw((prev) => {
-          const next = typeof updater === "function" ? updater(prev) : updater;
-          const nextStr = JSON.stringify(next);
-          lastSavedRef.current = nextStr;
-          lsSave(next);       
-          fbSave(next);       
-          return next;
-        });
-      }
-
-      function showToast(msg, type = "success") {
-        setToast({ msg, type });
-        setTimeout(() => setToast(null), 3000);
-      }
+      function setData(updater) { setDataRaw((prev) => { const next = typeof updater === "function" ? updater(prev) : updater; const nextStr = JSON.stringify(next); lastSavedRef.current = nextStr; lsSave(next); fbSave(next); return next; }); }
+      function showToast(msg, type = "success") { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }
 
       function completeTask(taskId, childId) {
-        const t = data.tasks.find((x) => x.id === taskId);
-        if (!t) return;
-        
+        const t = data.tasks.find((x) => x.id === taskId); if (!t) return;
         if (!t.requiresApproval) {
           fireConfetti(); 
           setData((prev) => {
-            let ch = [...prev.children];
-            let tr = [...prev.transactions];
-            if (t.rewardType === "money" || t.rewardType === "both") {
-              ch = ch.map((c) => c.id === childId ? { ...c, balance: c.balance + t.rewardAmount, totalEarned: c.totalEarned + t.rewardAmount } : c);
-              tr = [...tr, { id: uid(), childId, type: "earning", amount: t.rewardAmount, desc: t.name, date: new Date().toISOString() }];
-            }
-            if (t.rewardType === "points" || t.rewardType === "both") {
-              ch = ch.map((c) => c.id === childId ? { ...c, points: c.points + t.rewardPoints } : c);
-            }
+            let ch = [...prev.children]; let tr = [...prev.transactions];
+            if (t.rewardType === "money" || t.rewardType === "both") { ch = ch.map((c) => c.id === childId ? { ...c, balance: c.balance + t.rewardAmount, totalEarned: c.totalEarned + t.rewardAmount } : c); tr = [...tr, { id: uid(), childId, type: "earning", amount: t.rewardAmount, desc: t.name, date: new Date().toISOString() }]; }
+            if (t.rewardType === "points" || t.rewardType === "both") { ch = ch.map((c) => c.id === childId ? { ...c, points: c.points + t.rewardPoints } : c); }
             return { ...prev, children: ch, transactions: tr, completions: [...prev.completions, { id: uid(), taskId, childId, status: "approved", completedAt: new Date().toISOString(), approvedAt: new Date().toISOString(), parentNote: "" }] };
-          });
-          showToast("🎉 כל הכבוד! ביצוע נרשם");
+          }); showToast("🎉 כל הכבוד! ביצוע נרשם");
         } else {
-          setData((prev) => ({ ...prev, completions: [...prev.completions, { id: uid(), taskId, childId, status: "pending", completedAt: new Date().toISOString(), parentNote: "" }] }));
-          showToast("📤 נשלח לאישור הורה", "warn");
+          setData((prev) => ({ ...prev, completions: [...prev.completions, { id: uid(), taskId, childId, status: "pending", completedAt: new Date().toISOString(), parentNote: "" }] })); showToast("📤 נשלח לאישור הורה", "warn");
         }
       }
 
-      function onEarnAcademy(amt, desc) {
-        setData((prev) => {
-          const ch = prev.children.map((c) => c.id === loggedChild ? { ...c, balance: c.balance + amt, totalEarned: c.totalEarned + amt } : c);
-          const tr = [...prev.transactions, { id: uid(), childId: loggedChild, type: "earning", amount: amt, desc, date: new Date().toISOString() }];
-          return { ...prev, children: ch, transactions: tr };
-        });
-      }
+      function onEarnAcademy(amt, desc) { setData((prev) => { const ch = prev.children.map((c) => c.id === loggedChild ? { ...c, balance: c.balance + amt, totalEarned: c.totalEarned + amt } : c); const tr = [...prev.transactions, { id: uid(), childId: loggedChild, type: "earning", amount: amt, desc, date: new Date().toISOString() }]; return { ...prev, children: ch, transactions: tr }; }); }
 
       if (!data) return <div style={{ fontFamily: "'Rubik',sans-serif" }}><LoadingScreen /></div>;
       
       return (
         <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", position: "relative", background: C.bg, boxShadow: "0 0 60px rgba(0,0,0,.12)", direction: "rtl" }}>
           <Toast data={toast} />
-
-          {screen === "splash" && (
-            <SplashScreen onParent={() => setScreen("parentLogin")} onChild={() => setScreen("childSelect")} />
-          )}
-          {screen === "parentLogin" && (
-            <ParentLoginScreen onSuccess={(user) => { setLoggedParent(user); setScreen("parent"); }} onBack={() => setScreen("splash")} />
-          )}
-          {screen === "childSelect" && (
-            <ChildSelectScreen children={data.children} onSelect={(ch) => { setPinTarget(ch); setScreen("childPin"); }} onBack={() => setScreen("splash")} />
-          )}
-          {screen === "childPin" && pinTarget && (
-            <ChildPinScreen child={data.children.find((c) => c.id === pinTarget.id) || pinTarget} onSuccess={() => { setLoggedChild(pinTarget.id); setScreen("child"); }} onBack={() => setScreen("childSelect")} />
-          )}
-          {screen === "parent" && loggedParent && (
-            <ParentShell data={data} setData={setData} loggedParent={loggedParent} onLogout={() => { setLoggedParent(null); setScreen("splash"); }} showToast={showToast} />
-          )}
-          {screen === "child" && loggedChild && (
-            <ChildDashboard child={data.children.find((c) => c.id === loggedChild)} data={data} onComplete={completeTask} onEarn={onEarnAcademy} />
-          )}
+          {screen === "splash" && <SplashScreen onParent={() => setScreen("parentLogin")} onChild={() => setScreen("childSelect")} />}
+          {screen === "parentLogin" && <ParentLoginScreen onSuccess={(user) => { setLoggedParent(user); setScreen("parent"); }} onBack={() => setScreen("splash")} />}
+          {screen === "childSelect" && <ChildSelectScreen children={data.children} onSelect={(ch) => { setPinTarget(ch); setScreen("childPin"); }} onBack={() => setScreen("splash")} />}
+          {screen === "childPin" && pinTarget && <ChildPinScreen child={data.children.find((c) => c.id === pinTarget.id) || pinTarget} onSuccess={() => { setLoggedChild(pinTarget.id); setScreen("child"); }} onBack={() => setScreen("childSelect")} />}
+          {screen === "parent" && loggedParent && <ParentShell data={data} setData={setData} loggedParent={loggedParent} onLogout={() => { setLoggedParent(null); setScreen("splash"); }} showToast={showToast} />}
+          {screen === "child" && loggedChild && <ChildDashboard child={data.children.find((c) => c.id === loggedChild)} data={data} onComplete={completeTask} onEarn={onEarnAcademy} />}
         </div>
       );
     }
@@ -2112,7 +1847,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js')
+        navigator.serviceWorker.register('./firebase-messaging-sw.js')
           .then(function(registration) {
             console.log('ServiceWorker success!');
           })
